@@ -32,8 +32,8 @@ class LocalizationXmlFileParser implements FileParserContract
         
         // determine related info
         [$language_code, $type] = $this->parseFilepath($filepath);
-        $language_id = LocalizationLanguage::where('code', 'like', $language_code)->first();
-        $type_id = LocalizationType::where('name', 'like', $type);
+        $language_id = LocalizationLanguage::where('code', 'like', $language_code)->first()->id;
+        $type_id = LocalizationType::where('name', 'like', $type)->first()->id;
 
         $upsert = [];
         
