@@ -2,24 +2,38 @@
 
 namespace App\Parsers;
 
+use App\Models\LocalizationLanguage;
+use App\Models\LocalizationType;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class LocalizationXmlFileParser implements FileParserContract
 {
-
+    public function parseFilepath( string $filepath ) : array
+    {
+        $pieces = explode(DIRECTORY_SEPARATOR, $filepath);
+        $filename = array_pop($pieces);
+        $language = array_pop($pieces);
+        $type = Str::before(Str::after($filename, '_'), '.');
+        
+        return [$language, $type];
+    }
+    
     /**
+     * Read XML and insert into tables 
+     * 
      * @param string $filepath
      *
      * @return mixed
      */
     public function parseFile( string $filepath )
     {
-        // TODO: determine language from file path and find it in localization_languages table to set id
-        $language_id = 1;
-        // TODO: determine type and use it to find localization_types id
-        $type_id = 1;
-        
         $xmlObj = simplexml_load_file($filepath);
+        
+        // determine related info
+        [$language_code, $type] = $this->parseFilepath($filepath);
+        $language_id = LocalizationLanguage::where('code', 'like', $language_code)->first();
+        $type_id = LocalizationType::where('name', 'like', $type);
 
         $upsert = [];
         

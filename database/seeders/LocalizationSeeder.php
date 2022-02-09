@@ -10,8 +10,8 @@ class LocalizationSeeder extends Seeder
 {
     public function run()
     {
-        DB::table('localization_languages')->upsert(['name'=>'English', 'code'=>'en-us'], ['code']);
-        DB::table('localization_types')->upsert([['name'=>'item'], ['name'=>'perk']], ['name']);
+        DB::table('localization_languages')->upsert([['name'=>'English', 'code'=>'en-us']], ['code']);
+        DB::table('localization_types')->upsert([['name'=>'itemdefinitions_master'], ['name'=>'perks']], ['name']);
         
         $parser = new LocalizationXmlFileParser();
         $parser->parseFile(__DIR__.'/../../storage/app/localization/en-us/javelindata_itemdefinitions_master.loc.xml');
