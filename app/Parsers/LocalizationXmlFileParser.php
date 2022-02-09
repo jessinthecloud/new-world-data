@@ -50,7 +50,7 @@ class LocalizationXmlFileParser implements FileParserContract
             ];
 //$result = DB::table('localizations')->upsert($upsert, ['id_key']); // TEMP
         }
-        $result = DB::table('localizations')->upsert($upsert, ['key']);
+        $result = DB::table('localizations')->upsert($upsert, ['id_key']);
     }
 
     /**
