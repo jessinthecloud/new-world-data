@@ -4,7 +4,7 @@ namespace App\Parsers;
 
 use Illuminate\Support\Facades\DB;
 
-class LocalizationXmlParser implements ParserContract
+class LocalizationXmlFileParser implements FileParserContract
 {
 
     /**

@@ -2,7 +2,7 @@
 
 namespace App\Parsers;
 
-interface ParserContract
+interface FileParserContract
 {
     public function parseFile(string $filepath);
     public function parseDir(string $dir);
