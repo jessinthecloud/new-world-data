@@ -27,6 +27,7 @@ class CreateLocalizationsTable extends Migration
             // some keys have the same text when not accounting for utf8 characters
             // ex) 1hrapier_cremedelacremet5_description vs 1hRapier_CrèmeDeLaCrèmeT5_Description
             $table->string('id_key')->collation('utf8mb4_bin')->unique();
+            $table->string('field_type')->nullable();
             $table->longText('text');
             $table->foreignId('localization_type_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('localization_language_id')->constrained()->cascadeOnDelete();

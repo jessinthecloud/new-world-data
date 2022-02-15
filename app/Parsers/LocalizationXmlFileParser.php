@@ -39,18 +39,19 @@ class LocalizationXmlFileParser implements FileParserContract
         
         foreach($xmlObj->string as $i => $string){
             $key = $string->attributes()['key'];
-// $upsert = []; // TEMP
+ $upsert = []; // TEMP
             $upsert []= [
                 'id_key'=>$key->__toString(),
                 'text'=>$string->__toString(), 
+                'field_type'=>Str::afterLast($key->__toString(), '_'), 
                 'localization_type_id'=>$type_id, 
                 'localization_language_id'=>$language_id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
-//$result = DB::table('localizations')->upsert($upsert, ['id_key']); // TEMP
+$result = DB::table('localizations')->upsert($upsert, ['id_key']); // TEMP
         }
-        $result = DB::table('localizations')->upsert($upsert, ['id_key']);
+//        $result = DB::table('localizations')->upsert($upsert, ['id_key']);
     }
 
     /**
