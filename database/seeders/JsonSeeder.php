@@ -127,7 +127,7 @@ class JsonSeeder extends Seeder
                     // TODO: determine the unique ID column for each directory?
                         // can probably just use the first array key... 
                         // TODO: mark that col as ->unique() ?
-                    $table->string($column_name)->nullable();
+                    $table->text($column_name)->nullable();
                 }
                 // link back to file it comes from
                 $table->foreignId('file_id')->constrained('data_files');
@@ -144,14 +144,14 @@ class JsonSeeder extends Seeder
             foreach($value_array as $file => $db_values){
                 // first key should be the uniqueID column, i.e., ItemID, WeaponID
                 // TODO: install doctrine/dbal to modify the matching column and set it as ->unique() ?
-                $unique_key = array_key_first($values);
+                $unique_key = array_key_first($db_values);
                 
                 // map to dir/file entry in data_files
                 $file_id = DataFile::where('filename', $file)->first()?->id;
                 $db_values ['file_id']= $file_id;
-                
+//if(is_array($db_values[$unique_key])) { dd($db_values[$unique_key], $unique_key); }
                 // map to localization files
-                $localization_id = Localization::where('id_key', 'like', '%'.$values[$unique_key].'%')->first()?->id;
+                $localization_id = Localization::where('id_key', 'like', '%'.basename($unique_key, '.json').'%')->first()?->id;
                 $db_values ['localization_id']= $localization_id;
 
                 try {
