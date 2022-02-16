@@ -88,46 +88,28 @@ class JsonSeeder extends Seeder
         ];
         
         $parser = new JsonFileParser();
+        $values = [];
+        $data_files =[];
+        $data_file_types =[];
 
         foreach($dirs as $dir) {
+
+// TODO: this will become really inefficient very quickly.
+ // TODO: probably just build arrays for upserting after the dir loop is done
             
             $parsed_data = $parser->parseDir($dir);
-            $data_files = $parsed_data['data_files'];
-            $values = $parsed_data['values'];
-            dump("Upserting {$dir} filenames...");
-            DB::table('data_files')->upsert(
-                $data_files, 
-                ['directory', 'filename']
-            );
+            $data_files = array_merge($data_files, $parsed_data['data_files']);
+            $values = array_merge($values, $parsed_data['values']);
             
-            $data_file_types = array_map(function($data){
+            $data_file_types []= array_map(function($data){
                 // trim off file extension
                 return basename($data, '.json');
             }, array_column($data_files, 'filename'));
  
- // TODO: this will become really inefficient very quickly.
- // TODO: probably just build arrays for upserting after the dir loop is done           
-   dump($values, $data_files, $data_file_types,DataFile::all());
+     
+   dump($values, $data_files, $data_file_types);
 
-            $type_upsert = [];  
-            foreach($data_file_types as $type){
-dump($type);            
-                $file_id = DataFile::where('filename', 'like', $type.'%')->first()?->id;
-                if(empty($file_id)){
-                    continue;
-                }
-                $type_upsert []= [
-                    'file_id' => DataFile::where('filename', 'like', $type.'%')->first()->id,
-                    'name' => $type,
-                ];
-            }
-dd($type_upsert);            
-            dump("Upserting {$dir} file types...");
-            DB::table('data_file_types')->upsert(
-                $type_upsert, 
-                ['name']
-            );
-            
+   ////////////////////////////////         
           
             dump("Upserting values...");
         // TODO: create tables based on folder names
@@ -160,5 +142,32 @@ dd('COLUMN NAMES', $column_names, 'TABLE NAME: '.$table_name,);
                 }
             } // end foreach chunk            */
         } // end foreach dir
+
+        dump("Upserting {$dir} filenames...");
+            DB::table('data_files')->upsert(
+                $data_files, 
+                ['directory', 'filename']
+            );
+$type_upsert = [];  
+            foreach($data_file_types as $type){
+dump($type);            
+                $file_id = DataFile::where('filename', 'like', $type.'%')->first()?->id;
+                if(empty($file_id)){
+                    continue;
+                }
+                $type_upsert []= [
+                    'file_id' => DataFile::where('filename', 'like', $type.'%')->first()->id,
+                    'name' => $type,
+                ];
+            }
+dd($type_upsert);            
+            dump("Upserting {$dir} file types...");
+            DB::table('data_file_types')->upsert(
+                $type_upsert, 
+                ['name']
+            );
+            
+
+
     }
 }
