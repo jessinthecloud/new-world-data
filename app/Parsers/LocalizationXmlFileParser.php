@@ -27,7 +27,7 @@ class LocalizationXmlFileParser implements FileParserContract
      * @return mixed
      */
     public function parseFile( string $filepath )
-    {
+    {        
         $xmlObj = simplexml_load_file($filepath);
         
         // determine related info
@@ -35,12 +35,12 @@ class LocalizationXmlFileParser implements FileParserContract
         $language_id = LocalizationLanguage::where('code', 'like', $language_code)->first()->id;
         $type_id = LocalizationType::where('name', 'like', $type)->first()->id;
 
-        $upsert = [];
+        $values = [];
         
         foreach($xmlObj->string as $i => $string){
             $key = $string->attributes()['key'];
- $upsert = []; // TEMP
-            $upsert []= [
+            
+            $values []= [
                 'id_key'=>$key->__toString(),
                 'text'=>$string->__toString(), 
                 'field_type'=>Str::afterLast($key->__toString(), '_'), 
@@ -49,9 +49,9 @@ class LocalizationXmlFileParser implements FileParserContract
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
-$result = DB::table('localizations')->upsert($upsert, ['id_key']); // TEMP
         }
-//        $result = DB::table('localizations')->upsert($upsert, ['id_key']);
+        
+        return $values;
     }
 
     /**
