@@ -14,18 +14,10 @@ class CreateDataFilesTable extends Migration
             $table->string('filename')->unique();
             $table->timestamps();
         });
-        
-        Schema::create('data_file_types', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('file_id')->constrained('data_files');
-            $table->string('name')->unique();
-            $table->timestamps();
-        });
     }
 
     public function down()
     {
-        Schema::dropIfExists('data_file_types');
         Schema::dropIfExists('data_files');
     }
 }

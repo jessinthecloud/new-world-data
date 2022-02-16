@@ -31,16 +31,17 @@ class JsonFileParser implements FileParserContract
         foreach ( $files as $file ) {
             $filepath = $file->getPathname();
             $filename = $file->getFilename();
+            $dir = basename(dirname($filepath));
             
             $data_files []= [
-                'directory' => basename(dirname($filepath)),
+                'directory' => $dir,
                 'filename' => $filename,
             ];
             
             dump("Parsing {$filename}...");
             $values = $this->parseFile($filepath);
             
-            $values []= $values;
+            $values [$dir][$filename]= $values;
 /*dd(
     'values',$values,
     'data_files',$data_files,

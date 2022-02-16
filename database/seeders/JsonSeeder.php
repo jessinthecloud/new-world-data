@@ -91,6 +91,7 @@ class JsonSeeder extends Seeder
         $values = [];
         $data_files =[];
         $data_file_types =[];
+        $tables =[];
 
         foreach($dirs as $dir) {
 
@@ -99,39 +100,58 @@ class JsonSeeder extends Seeder
             
             $parsed_data = $parser->parseDir($dir);
             $data_files = array_merge($data_files, $parsed_data['data_files']);
-            $values = array_merge($values, $parsed_data['values']);
-            
-            $data_file_types []= array_map(function($data){
-                // trim off file extension
-                return basename($data, '.json');
-            }, array_column($data_files, 'filename'));
- 
+            $values = array_merge($values, $parsed_data['values']); 
      
-   dump($values, $data_files, $data_file_types);
+   dump($values, $data_files);
 
    ////////////////////////////////         
           
-            dump("Upserting values...");
         // TODO: create tables based on folder names
         // TODO: array keys are database columns to create the table with
         // TODO: map to localization files
             $column_names = isset($values[0]) ? array_keys($values[0]) : [];
             $table_name = array_column($data_files, 'directory')[0];
-            
+            $tables [$table_name]=$column_names;
 dd('COLUMN NAMES', $column_names, 'TABLE NAME: '.$table_name,);            
             
-            Schema::create($table_name, function (Blueprint $table) use ($column_names) {
-                $table->id();
-                foreach($column_names as $column_name){
-                    $table->string($column_name)->nullable();
-                }
-                $table->timestamps();
-            });
             
-            /*// chunk to avoid "too many parameters" SQL error
-            foreach ( array_chunk($values, 5000) as $upsert ) {
+            
+           
+        } // end foreach dir
+
+        dump("Upserting {$dir} filenames...");
+            DB::table('data_files')->upsert(
+                $data_files, 
+                ['directory', 'filename']
+            );
+
+            foreach($tables as $table){
+                Schema::create($table_name, function (Blueprint $table) use ($column_names) {
+                    $table->id();
+                    foreach($column_names as $column_name){
+                        // TODO: determine the unique ID column for each directory?
+                            // can probably just use the first array key... 
+                        $table->string($column_name)->nullable();
+                    }
+                    // link back to file it comes from
+                    $table->foreignId('file_id')->constrained('data_files');
+                    $table->timestamps();
+                });
+            }
+            
+        // insert values
+        dump("Upserting values...");
+        // chunk to avoid "too many parameters" SQL error
+        foreach(array_chunk($values, 5000) as $dir => $value_array){
+            foreach($value_array as $file => $db_values){
+                $file_id = DataFile::where('filename', $file)->first()?->id;
                 try {
-                    DB::table('localizations')->upsert($upsert, ['id_key']);
+                    $db_values ['file_id']= $file_id;
+                    // dir is table name
+//                    $columns = Schema::getColumnListing($dir);
+                    // should be the uniqueID column
+                    $unique_key = array_key_first($values);
+                    DB::table($dir)->upsert($db_values, [$unique_key]);
                 } catch ( \Throwable $throwable ) {
                     dump(
                         'ERROR OCCURRED: ' . substr($throwable->getMessage(), 0, 300),
@@ -140,34 +160,7 @@ dd('COLUMN NAMES', $column_names, 'TABLE NAME: '.$table_name,);
                         . ' -- in file: ' . $throwable->getFile()
                     );
                 }
-            } // end foreach chunk            */
-        } // end foreach dir
-
-        dump("Upserting {$dir} filenames...");
-            DB::table('data_files')->upsert(
-                $data_files, 
-                ['directory', 'filename']
-            );
-$type_upsert = [];  
-            foreach($data_file_types as $type){
-dump($type);            
-                $file_id = DataFile::where('filename', 'like', $type.'%')->first()?->id;
-                if(empty($file_id)){
-                    continue;
-                }
-                $type_upsert []= [
-                    'file_id' => DataFile::where('filename', 'like', $type.'%')->first()->id,
-                    'name' => $type,
-                ];
             }
-dd($type_upsert);            
-            dump("Upserting {$dir} file types...");
-            DB::table('data_file_types')->upsert(
-                $type_upsert, 
-                ['name']
-            );
-            
-
-
+        }
     }
 }
