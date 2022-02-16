@@ -7,11 +7,7 @@ use App\Parsers\JsonFileParser;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Symfony\Component\Finder\Finder;
 
 class JsonSeeder extends Seeder
 {
@@ -134,8 +130,9 @@ dd($type_upsert);
             
           
             dump("Upserting values...");
-    // TODO: create tables based on folder names
-    // TODO: array keys are database columns to create the table with
+        // TODO: create tables based on folder names
+        // TODO: array keys are database columns to create the table with
+        // TODO: map to localization files
             $column_names = isset($values[0]) ? array_keys($values[0]) : [];
             $table_name = array_column($data_files, 'directory')[0];
             
