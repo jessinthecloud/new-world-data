@@ -107,10 +107,13 @@ class JsonSeeder extends Seeder
             $tables [$table_name]=$column_names;
         } // end foreach dir
         
-dd('VALUES: ',$values, 'DATA FILES: ', $data_files, 'TABLES INFO:', $tables);
-
+//dd('VALUES: ',$values, 'DATA FILES: ', $data_files, 'TABLES INFO:', $tables);
 
         dump("Upserting {$dir} filenames...");
+        //  SQLSTATE[42000]: Syntax error or access violation: 1118 Row size too large.
+        // The maximum row size for the used table type, not counting BLOBs, is 65535.
+        // This includes storage overhead, check the manual.
+        // You have to change some columns to TEXT or BLOBs (SQL: create table `AbilityData` 
         DB::table('data_files')->upsert(
             $data_files, 
             ['directory', 'filename']
