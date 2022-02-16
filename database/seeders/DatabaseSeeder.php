@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             // localizations
             LocalizationSeeder::class,
+            JsonSeeder::class,
         ]);
         
     }

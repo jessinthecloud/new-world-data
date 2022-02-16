@@ -3,7 +3,6 @@
 namespace App\Parsers;
 
 use App\Models\LocalizationLanguage;
-use App\Models\LocalizationType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 

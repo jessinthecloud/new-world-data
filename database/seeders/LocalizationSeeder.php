@@ -50,7 +50,6 @@ class LocalizationSeeder extends Seeder
                     );
                 }
             }
-            
         }
     }
 }

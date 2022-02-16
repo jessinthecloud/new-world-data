@@ -37,8 +37,8 @@ class CreateLocalizationsTable extends Migration
 
     public function down()
     {
+        Schema::dropIfExists( 'localization_files' );
         Schema::dropIfExists( 'localizations' );
-        Schema::dropIfExists( 'localization_types' );
         Schema::dropIfExists( 'localization_languages' );
     }
 }
