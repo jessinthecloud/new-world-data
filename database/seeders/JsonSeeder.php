@@ -95,59 +95,58 @@ class JsonSeeder extends Seeder
         $tables =[];
 
         foreach($dirs as $dir) {
-
-// TODO: this will become really inefficient very quickly.
- // TODO: probably just build arrays for upserting after the dir loop is done
             
             $parsed_data = $parser->parseDir($dir);
             $data_files = array_merge($data_files, $parsed_data['data_files']);
             $values = array_merge($values, $parsed_data['values']); 
-     
-   dump($values, $data_files);
-
-   ////////////////////////////////         
-          
-        // TODO: create tables based on folder names
+            
             // array keys are database columns to create the table with
             $column_names = isset($values[0]) ? array_keys($values[0]) : [];
+            // dir name is the table name to create
             $table_name = array_column($data_files, 'directory')[0];
             $tables [$table_name]=$column_names;
-dd('COLUMN NAMES', $column_names, 'TABLE NAME: '.$table_name,);            
-           
         } // end foreach dir
+        
+dd('VALUES: ',$values, 'DATA FILES: ', $data_files, 'TABLES INFO:', $tables);
+
 
         dump("Upserting {$dir} filenames...");
-            DB::table('data_files')->upsert(
-                $data_files, 
-                ['directory', 'filename']
-            );
+        DB::table('data_files')->upsert(
+            $data_files, 
+            ['directory', 'filename']
+        );
 
-            foreach($tables as $table){
-                Schema::create($table_name, function (Blueprint $table) use ($column_names) {
-                    $table->id();
-                    foreach($column_names as $column_name){
-                        // TODO: determine the unique ID column for each directory?
-                            // can probably just use the first array key... 
-                        $table->string($column_name)->nullable();
-                    }
-                    // link back to file it comes from
-                    $table->foreignId('file_id')->constrained('data_files');
-                    // link to localization entry
-                    $table->foreignId('localization_id')->nullable()->constrained();
-                    $table->timestamps();
-                });
-            }
+        foreach($tables as $table){
+            // create tables based on folder names
+            Schema::create($table_name, function (Blueprint $table) use ($column_names) {
+                $table->id();
+                foreach($column_names as $column_name){
+                    // TODO: determine the unique ID column for each directory?
+                        // can probably just use the first array key... 
+                        // TODO: mark that col as ->unique() ?
+                    $table->string($column_name)->nullable();
+                }
+                // link back to file it comes from
+                $table->foreignId('file_id')->constrained('data_files');
+                // link to localization entry
+                $table->foreignId('localization_id')->nullable()->constrained();
+                $table->timestamps();
+            });
+        }
             
         // insert values
         dump("Upserting values...");
         // chunk to avoid "too many parameters" SQL error
         foreach(array_chunk($values, 5000) as $dir => $value_array){
             foreach($value_array as $file => $db_values){
-                // should be the uniqueID column, i.e., ItemID, WeaponID
+                // first key should be the uniqueID column, i.e., ItemID, WeaponID
+                // TODO: install doctrine/dbal to modify the matching column and set it as ->unique() ?
                 $unique_key = array_key_first($values);
+                
                 // map to dir/file entry in data_files
                 $file_id = DataFile::where('filename', $file)->first()?->id;
                 $db_values ['file_id']= $file_id;
+                
                 // map to localization files
                 $localization_id = Localization::where('id_key', 'like', '%'.$values[$unique_key].'%')->first()?->id;
                 $db_values ['localization_id']= $localization_id;
