@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\DataFile;
+use App\Models\Localization;
 use App\Parsers\JsonFileParser;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Seeder;
@@ -107,15 +108,11 @@ class JsonSeeder extends Seeder
    ////////////////////////////////         
           
         // TODO: create tables based on folder names
-        // TODO: array keys are database columns to create the table with
-        // TODO: map to localization files
+            // array keys are database columns to create the table with
             $column_names = isset($values[0]) ? array_keys($values[0]) : [];
             $table_name = array_column($data_files, 'directory')[0];
             $tables [$table_name]=$column_names;
 dd('COLUMN NAMES', $column_names, 'TABLE NAME: '.$table_name,);            
-            
-            
-            
            
         } // end foreach dir
 
@@ -135,6 +132,8 @@ dd('COLUMN NAMES', $column_names, 'TABLE NAME: '.$table_name,);
                     }
                     // link back to file it comes from
                     $table->foreignId('file_id')->constrained('data_files');
+                    // link to localization entry
+                    $table->foreignId('localization_id')->nullable()->constrained();
                     $table->timestamps();
                 });
             }
@@ -144,13 +143,18 @@ dd('COLUMN NAMES', $column_names, 'TABLE NAME: '.$table_name,);
         // chunk to avoid "too many parameters" SQL error
         foreach(array_chunk($values, 5000) as $dir => $value_array){
             foreach($value_array as $file => $db_values){
+                // should be the uniqueID column, i.e., ItemID, WeaponID
+                $unique_key = array_key_first($values);
+                // map to dir/file entry in data_files
                 $file_id = DataFile::where('filename', $file)->first()?->id;
+                $db_values ['file_id']= $file_id;
+                // map to localization files
+                $localization_id = Localization::where('id_key', 'like', '%'.$values[$unique_key].'%')->first()?->id;
+                $db_values ['localization_id']= $localization_id;
+
                 try {
-                    $db_values ['file_id']= $file_id;
                     // dir is table name
 //                    $columns = Schema::getColumnListing($dir);
-                    // should be the uniqueID column
-                    $unique_key = array_key_first($values);
                     DB::table($dir)->upsert($db_values, [$unique_key]);
                 } catch ( \Throwable $throwable ) {
                     dump(
