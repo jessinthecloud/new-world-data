@@ -8,16 +8,16 @@ class CreateLocalizationsTable extends Migration
 {
     public function up()
     {
-        Schema::create( 'localization_types', function ( Blueprint $table ) {
-            $table->id();
-            $table->string('name');
-            $table->timestamps();
-        } );
-        
         Schema::create( 'localization_languages', function ( Blueprint $table ) {
             $table->id();
             $table->string('name')->unique();
-            $table->string('code', 10);
+            $table->string('code', 10)->unique();
+            $table->timestamps();
+        } );
+        
+        Schema::create( 'localization_files', function ( Blueprint $table ) {
+            $table->id();
+            $table->string('filename')->unique();
             $table->timestamps();
         } );
         
@@ -29,8 +29,8 @@ class CreateLocalizationsTable extends Migration
             $table->string('id_key')->collation('utf8mb4_bin')->unique();
             $table->string('field_type')->nullable();
             $table->longText('text');
-            $table->foreignId('localization_type_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('localization_language_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('language_id')->constrained('localization_languages')->cascadeOnDelete();
+            $table->foreignId('file_id')->nullable()->constrained('localization_files')->nullOnDelete();
             $table->timestamps();
         } );
     }

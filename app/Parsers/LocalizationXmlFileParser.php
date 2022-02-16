@@ -33,8 +33,8 @@ class LocalizationXmlFileParser implements FileParserContract
         // determine related info
         [$language_code, $type] = $this->parseFilepath($filepath);
         $language_id = LocalizationLanguage::where('code', 'like', $language_code)->first()->id;
-        $type_id = LocalizationType::where('name', 'like', $type)->first()->id;
-
+        $file_id = DB::table('localization_files')->where('filename', Str::afterLast($filepath, DIRECTORY_SEPARATOR))->first()->id;
+        
         $values = [];
         
         foreach($xmlObj->string as $i => $string){
@@ -43,9 +43,9 @@ class LocalizationXmlFileParser implements FileParserContract
             $values []= [
                 'id_key'=>$key->__toString(),
                 'text'=>$string->__toString(), 
-                'field_type'=>Str::afterLast($key->__toString(), '_'), 
-                'localization_type_id'=>$type_id, 
-                'localization_language_id'=>$language_id,
+                'field_type'=>Str::afterLast($key->__toString(), '_'),
+                'language_id'=>$language_id,
+                'file_id'=>$file_id,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
