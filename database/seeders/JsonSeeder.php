@@ -91,25 +91,35 @@ class JsonSeeder extends Seeder
         $parser = new JsonFileParser();
         $values = [];
         $data_files =[];
-        $data_file_types =[];
+        $combos =[];
         $tables =[];
-
+        $columns =[];
+        
         foreach($dirs as $dir) {
             
             $parsed_data = $parser->parseDir($dir);
-            $data_files = array_merge($data_files, $parsed_data['data_files']);
-            $values = array_merge($values, $parsed_data['values']); 
-            
-            // array keys are database columns to create the table with
-            $column_names = isset($values[0]) ? array_keys($values[0]) : [];
-            // dir name is the table name to create
-            $table_name = array_column($data_files, 'directory')[0];
-            $tables [$table_name]=$column_names;
-        } // end foreach dir
-        
-//dd('VALUES: ',$values, 'DATA FILES: ', $data_files, 'TABLES INFO:', $tables);
 
-        dump("Upserting {$dir} filenames...");
+            $data_files = array_merge($data_files, $parsed_data['data_files']);
+            $combos []= $parsed_data['combo'];
+            
+            // dir name is the table name to create
+            $tables [basename($dir)]=$columns;
+            // add file to value data
+/*            array_walk($values, function($value, $index) use ($data_files) {
+dump('value: ',$value); dump( 'file',$data_files[$index]['filename']);
+                $value['file']= $data_files[$index]['filename'];
+                $value['dir']= $data_files[$index]['directory'];
+            });*/
+        } // end foreach dir
+        /*
+         * $combos[][]['dir']
+         * $combos[][]['file']
+         * $combos[][]['values']
+         */
+// dd($combos[0]);            
+
+//dd(array_keys($combos));
+        dump("Upserting ".basename($dir)." filenames...");
         //  SQLSTATE[42000]: Syntax error or access violation: 1118 Row size too large.
         // The maximum row size for the used table type, not counting BLOBs, is 65535.
         // This includes storage overhead, check the manual.
@@ -118,55 +128,92 @@ class JsonSeeder extends Seeder
             $data_files, 
             ['directory', 'filename']
         );
+        
+        foreach($tables as $table_name => $column_names){
+            dump("Creating {$table_name} table...");
 
-        foreach($tables as $table){
+            if (Schema::hasTable($table_name)) {
+                continue;
+            }
             // create tables based on folder names
-            Schema::create($table_name, function (Blueprint $table) use ($column_names) {
+            Schema::create($table_name, function (Blueprint $table) use ($table_name, $column_names) {
+                
+                // still auto inc primary key
                 $table->id();
-                foreach($column_names as $column_name){
+
+                foreach ( $column_names as $index => $column_name ) {
+                    if (Schema::hasColumn($table_name, $column_name) ) {
+                        continue;
+                    }
                     // TODO: determine the unique ID column for each directory?
-                        // can probably just use the first array key... 
-                        // TODO: mark that col as ->unique() ?
-                    $table->text($column_name)->nullable();
-                }
+                    // can probably just use the first array key... 
+                    // TODO: mark that col as ->unique() ?
+                    if ( $index == 0 ) {
+                        $table->string($column_name)->nullable()->unique();
+                    } else {
+                        $table->text($column_name)->nullable();
+                    }
+
+                } // end foreach column
+                
                 // link back to file it comes from
                 $table->foreignId('file_id')->constrained('data_files');
                 // link to localization entry
                 $table->foreignId('localization_id')->nullable()->constrained();
+                // created/updated
                 $table->timestamps();
             });
-        }
-            
+            dump("{$table_name} table created.");
+        } // end foreach table
+
         // insert values
         dump("Upserting values...");
-        // chunk to avoid "too many parameters" SQL error
-        foreach(array_chunk($values, 5000) as $dir => $value_array){
-            foreach($value_array as $file => $db_values){
-                // first key should be the uniqueID column, i.e., ItemID, WeaponID
-                // TODO: install doctrine/dbal to modify the matching column and set it as ->unique() ?
-                $unique_key = array_key_first($db_values);
-                
-                // map to dir/file entry in data_files
-                $file_id = DataFile::where('filename', $file)->first()?->id;
-                $db_values ['file_id']= $file_id;
-//if(is_array($db_values[$unique_key])) { dd($db_values[$unique_key], $unique_key); }
-                // map to localization files
-                $localization_id = Localization::where('id_key', 'like', '%'.basename($unique_key, '.json').'%')->first()?->id;
-                $db_values ['localization_id']= $localization_id;
+        /*
+         * $combos[]['dir']
+         * $combos[]['file']
+         * $combos[]['values']
+         */
+        // chunk to avoid SQL error
+        foreach(array_chunk($combos, 5000) as  $combo_array) {
+            foreach ( $combo_array as $combo_arr ) {
+                foreach ( $combo_arr as $index => $combo ) {
+                    foreach ( $combo['values'] as $db_values ) {
 
-                try {
-                    // dir is table name
-//                    $columns = Schema::getColumnListing($dir);
-                    DB::table($dir)->upsert($db_values, [$unique_key]);
-                } catch ( \Throwable $throwable ) {
-                    dump(
-                        'ERROR OCCURRED: ' . substr($throwable->getMessage(), 0, 300),
-                        'Error code: ' . $throwable->getCode()
-                        . ' -- on line: ' . $throwable->getLine()
-                        . ' -- in file: ' . $throwable->getFile()
-                    );
-                }
+                        $file = $combo['file'];
+                        $dir = $combo['dir'];
+                        
+                        // TODO: install doctrine/dbal to modify the matching column
+                        //       and set it as ->unique() ?
+                        // first key should be the uniqueID column, i.e., ItemID, WeaponID
+                        $unique_key = array_key_first($db_values);
+
+                        // map to dir/file entry in data_files
+                        $file_id = DataFile::where('filename', $file)->first()?->id;
+                        $db_values ['file_id'] = $file_id;
+
+                        // map to localization files
+                        $localization_id = Localization::where(
+                            'id_key',
+                            'like',
+                            '%' . basename($unique_key, '.json') . '%'
+                        )->first()?->id;
+                        $db_values ['localization_id'] = $localization_id;
+
+                        try {
+                            // dir is table name
+                            //                    $columns = Schema::getColumnListing($dir);
+                            DB::table($dir)->upsert($db_values, [$unique_key]);
+                        } catch ( \Throwable $throwable ) {
+                            dump(
+                                'ERROR OCCURRED: ' . substr($throwable->getMessage(), 0, 300),
+                                'Error code: ' . $throwable->getCode()
+                                . ' -- on line: ' . $throwable->getLine()
+                                . ' -- in file: ' . $throwable->getFile()
+                            );
+                        }
+                    } // foreach values
+                } // foreach combo
             }
-        }
+        } // foreach combos
     }
 }

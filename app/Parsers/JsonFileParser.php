@@ -25,8 +25,9 @@ class JsonFileParser implements FileParserContract
         
         // get all files from dir and subdirectories
         $files = File::allFiles($dir);
-        $values = [];
         $data_files = [];
+        $combo = [];
+        $columns = [];
         
         foreach ( $files as $file ) {
             $filepath = $file->getPathname();
@@ -40,18 +41,23 @@ class JsonFileParser implements FileParserContract
             
             dump("Parsing {$filename}...");
             $values = $this->parseFile($filepath);
-            
-            $values [$dir][$filename]= $values;
-/*dd(
-    'values',$values,
-    'data_files',$data_files,
-//    isset($values[0]) ? array_keys($values[0]) : [],
-//'directories: ',collect($data_files)->pluck('directory')->all(),
-//'filenames: ',collect($data_files)->pluck('filename')->all(),
-);*/            
+            // array keys are database columns to create the table with
+            $columns = array_keys($values);
+
+            $combo []= [
+                'dir' => $dir,
+                'file' => $filename,
+                'values' => $values,
+            ];
+
+
         } // end foreach file
         
-        return ['data_files'=>$data_files, 'values'=>$values];
+        return [
+            'data_files'=>$data_files,
+            'combo'=> $combo,
+            'columns'=> $columns,
+        ];
     }
 
     public function parseFiles(array $filepaths)
