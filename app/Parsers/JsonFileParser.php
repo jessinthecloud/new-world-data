@@ -29,11 +29,13 @@ class JsonFileParser implements FileParserContract
         $data_files = [];
         $combo = [];
         $columns = [];
+        $tables = [];
         
         foreach ( $files as $file ) {
             $filepath = $file->getPathname();
             $filename = $file->getFilename();
             $dir = basename(dirname($filepath));
+            $table_name = $dir.'_'.basename($filename, '.json');
             
             $data_files []= [
                 'directory' => $dir,
@@ -41,26 +43,28 @@ class JsonFileParser implements FileParserContract
             ];
             
             dump("Parsing {$filename}...");
-            $values = $this->parseFile($filepath);
-            
-            // array keys are database columns to create the table with
-            $columns = array_unique(Arr::flatten(array_merge($columns, array_map(function($value_array){
-                return array_keys($value_array);
-            }, $values))));
+            $values = array_filter($this->parseFile($filepath));
+
+            foreach($values as $index => $value_array){
+                $columns = array_unique(array_merge($columns, array_keys($value_array)));
+            }
+           
+            $tables [$table_name]= $columns;
 
             $combo []= [
                 'dir' => $dir,
                 'file' => $filename,
+                'table' => $table_name,
                 'values' => $values,
             ];
 
 
         } // end foreach file
-        
+      
         return [
             'data_files'=>$data_files,
             'combo'=> $combo,
-            'columns'=> $columns,
+            'tables'=> $tables,
         ];
     }
 

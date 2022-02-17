@@ -7,6 +7,7 @@ use App\Models\Localization;
 use App\Parsers\JsonFileParser;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -87,9 +88,9 @@ class JsonSeeder extends Seeder
             $combos []= $parsed_data['combo'];
                        
             // dir name is the table name to create
-            $tables [basename($dir)]=$parsed_data['columns'];
+            $tables = array_merge($tables, $parsed_data['tables']);
         } // end foreach dir
-
+//dd($tables);
         dump("Upserting ".basename($dir)." filenames...");
         
         DB::table('data_files')->upsert(
@@ -108,17 +109,21 @@ class JsonSeeder extends Seeder
              */
             // create tables based on folder names
             Schema::create($table_name, function (Blueprint $table) use ($table_name, $column_names) {
+                // make sure column names are valid and not dupes
+                array_walk($column_names, function(&$column_name){
+                    $column_name = Str::snake($column_name);
+                });
+                $column_names = array_unique($column_names);
                 
                 // still auto inc primary key
                 $table->id();
                 // link back to file it comes from
                 $table->foreignId('file_id')->constrained('data_files');
                 // link to localization entry
-                $table->foreignId('localization_id')->nullable()->constrained();
-                array_walk($column_names, function(&$column_name){
-                    $column_name = Str::snake($column_name);
-                });
-                $column_names = array_unique($column_names);
+                // need manually done bc auto-gen name is too long
+                $table->bigInteger('localization_id')->nullable()->unsigned();
+                $table->foreign('localization_id', 'fk_'.substr($table_name,0,10).'_localize_id')->references('id')->on('localizations');
+                
                 foreach ( $column_names as $index => $column_name ) {
                     if (Schema::hasColumn($table_name, $column_name) ) {
                         continue;
@@ -155,6 +160,7 @@ class JsonSeeder extends Seeder
 
                         $file = $combo['file'];
                         $dir = $combo['dir'];
+                        $table_name = $combo['table'];
                         
                         // TODO: install doctrine/dbal to modify the matching column
                         //       and set it as ->unique() ?
@@ -176,7 +182,7 @@ class JsonSeeder extends Seeder
                         try {
                             // dir is table name
                             //                    $columns = Schema::getColumnListing($dir);
-                            DB::table($dir)->upsert($db_values, [$unique_key]);
+                            DB::table($table_name)->upsert($db_values, [$unique_key]);
                         } catch ( \Throwable $throwable ) {
                             dump(
                                 'ERROR OCCURRED: ' . substr($throwable->getMessage(), 0, 300),
