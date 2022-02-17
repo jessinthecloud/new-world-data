@@ -9,6 +9,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class JsonSeeder extends Seeder
 {
@@ -17,12 +18,10 @@ class JsonSeeder extends Seeder
         $base_dir = __DIR__.'/../../storage/app/json';
         $dirs = [
             $base_dir.DIRECTORY_SEPARATOR.'AbilityData',
-            $base_dir.DIRECTORY_SEPARATOR.'AchievementData',
             $base_dir.DIRECTORY_SEPARATOR.'AffixData',
             $base_dir.DIRECTORY_SEPARATOR.'AffixStatData',
             $base_dir.DIRECTORY_SEPARATOR.'AfflictionData',
             $base_dir.DIRECTORY_SEPARATOR.'AmmoItemDefinitions',
-            $base_dir.DIRECTORY_SEPARATOR.'ArmorAppearanceDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'ArmorItemDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'AttributeDefinition',
             $base_dir.DIRECTORY_SEPARATOR.'BlueprintItemDefinitions',
@@ -34,7 +33,6 @@ class JsonSeeder extends Seeder
             $base_dir.DIRECTORY_SEPARATOR.'CraftingRecipeData',
             $base_dir.DIRECTORY_SEPARATOR.'DamageData',
             $base_dir.DIRECTORY_SEPARATOR.'DamageTypeData',
-            $base_dir.DIRECTORY_SEPARATOR.'DivertedLootData',
             $base_dir.DIRECTORY_SEPARATOR.'EncumbranceData',
             $base_dir.DIRECTORY_SEPARATOR.'EntitlementData',
             $base_dir.DIRECTORY_SEPARATOR.'ExperienceData',
@@ -45,10 +43,6 @@ class JsonSeeder extends Seeder
             $base_dir.DIRECTORY_SEPARATOR.'GameModeData',
             $base_dir.DIRECTORY_SEPARATOR.'GatherableData',
             $base_dir.DIRECTORY_SEPARATOR.'GearScoreUpgradeDefinition',
-            $base_dir.DIRECTORY_SEPARATOR.'ItemCurrencyConversionData',
-            $base_dir.DIRECTORY_SEPARATOR.'ItemSkinData',
-            $base_dir.DIRECTORY_SEPARATOR.'ItemSoundEvents',
-            $base_dir.DIRECTORY_SEPARATOR.'ItemTooltipLayout',
             $base_dir.DIRECTORY_SEPARATOR.'ItemTransform',
             $base_dir.DIRECTORY_SEPARATOR.'KitItemDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'LevelDisparityData',
@@ -59,30 +53,20 @@ class JsonSeeder extends Seeder
             $base_dir.DIRECTORY_SEPARATOR.'MasterItemDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'PerkBucketData',
             $base_dir.DIRECTORY_SEPARATOR.'PerkData',
-            $base_dir.DIRECTORY_SEPARATOR.'PlayerTitleData',
             $base_dir.DIRECTORY_SEPARATOR.'ProgressionPointData',
             $base_dir.DIRECTORY_SEPARATOR.'ProgressionPoolData',
-            $base_dir.DIRECTORY_SEPARATOR.'PromotionMutationStaticData',
             $base_dir.DIRECTORY_SEPARATOR.'ResourceItemDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'RewardData',
             $base_dir.DIRECTORY_SEPARATOR.'RewardMilestoneData',
             $base_dir.DIRECTORY_SEPARATOR.'RewardModifierData',
-            $base_dir.DIRECTORY_SEPARATOR.'SimpleTreeCategoryData',
             $base_dir.DIRECTORY_SEPARATOR.'SkillData',
             $base_dir.DIRECTORY_SEPARATOR.'SkillExperienceData',
             $base_dir.DIRECTORY_SEPARATOR.'SpecializationDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'SpellData',
             $base_dir.DIRECTORY_SEPARATOR.'StatusEffectCategoryData',
             $base_dir.DIRECTORY_SEPARATOR.'StatusEffectData',
-            $base_dir.DIRECTORY_SEPARATOR.'TerritoryDefinition',
-            $base_dir.DIRECTORY_SEPARATOR.'TerritoryProgressionData',
-            $base_dir.DIRECTORY_SEPARATOR.'TerritoryUpkeepDefinition',
             $base_dir.DIRECTORY_SEPARATOR.'TradeSkillPostCapData',
             $base_dir.DIRECTORY_SEPARATOR.'TradeskillRankData',
-            $base_dir.DIRECTORY_SEPARATOR.'VitalsCategoryData',
-            $base_dir.DIRECTORY_SEPARATOR.'VitalsData',
-            $base_dir.DIRECTORY_SEPARATOR.'VitalsLevelData',
-            $base_dir.DIRECTORY_SEPARATOR.'VitalsModifierData',
             $base_dir.DIRECTORY_SEPARATOR.'WarboardStatDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'WeaponEffectData',
             $base_dir.DIRECTORY_SEPARATOR.'WeaponItemDefinitions',
@@ -101,29 +85,13 @@ class JsonSeeder extends Seeder
 
             $data_files = array_merge($data_files, $parsed_data['data_files']);
             $combos []= $parsed_data['combo'];
-            
+                       
             // dir name is the table name to create
-            $tables [basename($dir)]=$columns;
-            // add file to value data
-/*            array_walk($values, function($value, $index) use ($data_files) {
-dump('value: ',$value); dump( 'file',$data_files[$index]['filename']);
-                $value['file']= $data_files[$index]['filename'];
-                $value['dir']= $data_files[$index]['directory'];
-            });*/
+            $tables [basename($dir)]=$parsed_data['columns'];
         } // end foreach dir
-        /*
-         * $combos[][]['dir']
-         * $combos[][]['file']
-         * $combos[][]['values']
-         */
-// dd($combos[0]);            
 
-//dd(array_keys($combos));
         dump("Upserting ".basename($dir)." filenames...");
-        //  SQLSTATE[42000]: Syntax error or access violation: 1118 Row size too large.
-        // The maximum row size for the used table type, not counting BLOBs, is 65535.
-        // This includes storage overhead, check the manual.
-        // You have to change some columns to TEXT or BLOBs (SQL: create table `AbilityData` 
+        
         DB::table('data_files')->upsert(
             $data_files, 
             ['directory', 'filename']
@@ -135,12 +103,22 @@ dump('value: ',$value); dump( 'file',$data_files[$index]['filename']);
             if (Schema::hasTable($table_name)) {
                 continue;
             }
+            /*
+             *  SQLSTATE[42000]: Syntax error or access violation: 1118 Row size too large (> 8126). Changing some columns to TEXT or BLOB may help. In current row format, BLOB prefix of 0 bytes is stored inline.
+             */
             // create tables based on folder names
             Schema::create($table_name, function (Blueprint $table) use ($table_name, $column_names) {
                 
                 // still auto inc primary key
                 $table->id();
-
+                // link back to file it comes from
+                $table->foreignId('file_id')->constrained('data_files');
+                // link to localization entry
+                $table->foreignId('localization_id')->nullable()->constrained();
+                array_walk($column_names, function(&$column_name){
+                    $column_name = Str::snake($column_name);
+                });
+                $column_names = array_unique($column_names);
                 foreach ( $column_names as $index => $column_name ) {
                     if (Schema::hasColumn($table_name, $column_name) ) {
                         continue;
@@ -156,10 +134,6 @@ dump('value: ',$value); dump( 'file',$data_files[$index]['filename']);
 
                 } // end foreach column
                 
-                // link back to file it comes from
-                $table->foreignId('file_id')->constrained('data_files');
-                // link to localization entry
-                $table->foreignId('localization_id')->nullable()->constrained();
                 // created/updated
                 $table->timestamps();
             });

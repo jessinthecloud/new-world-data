@@ -2,6 +2,7 @@
 
 namespace App\Parsers;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -41,8 +42,11 @@ class JsonFileParser implements FileParserContract
             
             dump("Parsing {$filename}...");
             $values = $this->parseFile($filepath);
+            
             // array keys are database columns to create the table with
-            $columns = array_keys($values);
+            $columns = array_unique(Arr::flatten(array_merge($columns, array_map(function($value_array){
+                return array_keys($value_array);
+            }, $values))));
 
             $combo []= [
                 'dir' => $dir,
