@@ -35,7 +35,7 @@ class JsonFileParser implements FileParserContract
             $filepath = $file->getPathname();
             $filename = $file->getFilename();
             $dir = basename(dirname($filepath));
-            $table_name = $dir.'_'.basename($filename, '.json');
+            $table_name = basename($filename, '.json');
             
             $data_files []= [
                 'directory' => $dir,

@@ -90,7 +90,7 @@ class JsonSeeder extends Seeder
             // dir name is the table name to create
             $tables = array_merge($tables, $parsed_data['tables']);
         } // end foreach dir
-//dd($tables);
+
         dump("Upserting ".basename($dir)." filenames...");
         
         DB::table('data_files')->upsert(
@@ -99,44 +99,52 @@ class JsonSeeder extends Seeder
         );
         
         foreach($tables as $table_name => $column_names){
-            dump("Creating {$table_name} table...");
+        
+            dump("Creating {$table_name} table, ".count($column_names)." columns...");
 
-            if (Schema::hasTable($table_name)) {
+            if (Schema::hasTable($table_name) || $table_name == 'StatusEffectData_StatusEffects') {
                 continue;
             }
+            
             /*
-             *  SQLSTATE[42000]: Syntax error or access violation: 1118 Row size too large (> 8126). Changing some columns to TEXT or BLOB may help. In current row format, BLOB prefix of 0 bytes is stored inline.
+             *  SQLSTATE[42000]: Syntax error or access violation: 1118 Row size too large (> 8126). 
+             *      Changing some columns to TEXT or BLOB may help. 
+             *      In current row format, BLOB prefix of 0 bytes is stored inline.
              */
+             
             // create tables based on folder names
             Schema::create($table_name, function (Blueprint $table) use ($table_name, $column_names) {
-                // make sure column names are valid and not dupes
+                // make sure column names are valid
                 array_walk($column_names, function(&$column_name){
                     $column_name = Str::snake($column_name);
                 });
+                // make sure column names are not dupes
                 $column_names = array_unique($column_names);
                 
                 // still auto inc primary key
                 $table->id();
+                
                 // link back to file it comes from
-                $table->foreignId('file_id')->constrained('data_files');
+                $table->bigInteger('file_id')->nullable()->unsigned();
+                $table->foreign('file_id', 'fk_'.Str::random(8).'_file_id')->references('id')->on('data_files');
+                
                 // link to localization entry
                 // need manually done bc auto-gen name is too long
                 $table->bigInteger('localization_id')->nullable()->unsigned();
-                $table->foreign('localization_id', 'fk_'.substr($table_name,0,10).'_localize_id')->references('id')->on('localizations');
+                $table->foreign('localization_id', 'fk_'.Str::random(8).'_localize_id')->references('id')->on('localizations');
                 
                 foreach ( $column_names as $index => $column_name ) {
                     if (Schema::hasColumn($table_name, $column_name) ) {
                         continue;
                     }
-                    // TODO: determine the unique ID column for each directory?
-                    // can probably just use the first array key... 
-                    // TODO: mark that col as ->unique() ?
-                    if ( $index == 0 ) {
-                        $table->string($column_name)->nullable()->unique();
-                    } else {
-                        $table->text($column_name)->nullable();
-                    }
 
+                    if ( $index == 0 ) {
+                        // the first array key is prob unique ID column...
+                        $table->string($column_name)->nullable()->unique(Str::random(8).'_uni');
+                    } else {
+                        // TODO: determine appropriate column type 
+                        $table->tinyInteger($column_name)->nullable();
+                    }
                 } // end foreach column
                 
                 // created/updated
@@ -162,8 +170,6 @@ class JsonSeeder extends Seeder
                         $dir = $combo['dir'];
                         $table_name = $combo['table'];
                         
-                        // TODO: install doctrine/dbal to modify the matching column
-                        //       and set it as ->unique() ?
                         // first key should be the uniqueID column, i.e., ItemID, WeaponID
                         $unique_key = array_key_first($db_values);
 
@@ -180,8 +186,6 @@ class JsonSeeder extends Seeder
                         $db_values ['localization_id'] = $localization_id;
 
                         try {
-                            // dir is table name
-                            //                    $columns = Schema::getColumnListing($dir);
                             DB::table($table_name)->upsert($db_values, [$unique_key]);
                         } catch ( \Throwable $throwable ) {
                             dump(
