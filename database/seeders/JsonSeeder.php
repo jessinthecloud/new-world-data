@@ -90,115 +90,47 @@ class JsonSeeder extends Seeder
             // dir name is the table name to create
             $tables = array_merge($tables, $parsed_data['tables']);
         } // end foreach dir
+        
+        $combos = collect($combos)->flatten(1);
 
         dump("Upserting ".basename($dir)." filenames...");
         
-        DB::table('data_files')->upsert(
-            $data_files, 
-            ['directory', 'filename']
-        );
-        
-        foreach($tables as $table_name => $column_names){
-        
-            dump("Creating {$table_name} table, ".count($column_names)." columns...");
-
-            if (Schema::hasTable($table_name) || $table_name == 'StatusEffectData_StatusEffects') {
-                continue;
-            }
-            
-            /*
-             *  SQLSTATE[42000]: Syntax error or access violation: 1118 Row size too large (> 8126). 
-             *      Changing some columns to TEXT or BLOB may help. 
-             *      In current row format, BLOB prefix of 0 bytes is stored inline.
-             */
-             
-            // create tables based on folder names
-            Schema::create($table_name, function (Blueprint $table) use ($table_name, $column_names) {
-                // make sure column names are valid
-                array_walk($column_names, function(&$column_name){
-                    $column_name = Str::snake($column_name);
-                });
-                // make sure column names are not dupes
-                $column_names = array_unique($column_names);
+        foreach($combos as $index => $combo) {
+            foreach ( $combo['values'] as $db_values ) {
                 
-                // still auto inc primary key
-                $table->id();
+                $dir = $combo['dir'];
+                $file = $combo['file'];
+                $table_name = $combo['table']['name'];
+                $columns = $combo['table']['columns'];
+
+                // first key should be the uniqueID column, i.e., ItemID, WeaponID
+                $unique_key = array_key_first($db_values);
+
+                // map to dir/file entry in data_files
+                $file_id = DataFile::where('filename', $file)->first()?->id;
+                $db_values ['file_id']= $file_id;
+
+                // map to localization files
+                $localization_id = Localization::where(
+                    'id_key',
+                    'like',
+                    '%' . basename($unique_key, '.json') . '%'
+                )->first()?->id;
                 
-                // link back to file it comes from
-                $table->bigInteger('file_id')->nullable()->unsigned();
-                $table->foreign('file_id', 'fk_'.Str::random(8).'_file_id')->references('id')->on('data_files');
-                
-                // link to localization entry
-                // need manually done bc auto-gen name is too long
-                $table->bigInteger('localization_id')->nullable()->unsigned();
-                $table->foreign('localization_id', 'fk_'.Str::random(8).'_localize_id')->references('id')->on('localizations');
-                
-                foreach ( $column_names as $index => $column_name ) {
-                    if (Schema::hasColumn($table_name, $column_name) ) {
-                        continue;
-                    }
+                $db_values ['localization_id']= $localization_id;
 
-                    if ( $index == 0 ) {
-                        // the first array key is prob unique ID column...
-                        $table->string($column_name)->nullable()->unique(Str::random(8).'_uni');
-                    } else {
-                        // TODO: determine appropriate column type 
-                        $table->tinyInteger($column_name)->nullable();
-                    }
-                } // end foreach column
-                
-                // created/updated
-                $table->timestamps();
-            });
-            dump("{$table_name} table created.");
-        } // end foreach table
-
-        // insert values
-        dump("Upserting values...");
-        /*
-         * $combos[]['dir']
-         * $combos[]['file']
-         * $combos[]['values']
-         */
-        // chunk to avoid SQL error
-        foreach(array_chunk($combos, 5000) as  $combo_array) {
-            foreach ( $combo_array as $combo_arr ) {
-                foreach ( $combo_arr as $index => $combo ) {
-                    foreach ( $combo['values'] as $db_values ) {
-
-                        $file = $combo['file'];
-                        $dir = $combo['dir'];
-                        $table_name = $combo['table'];
-                        
-                        // first key should be the uniqueID column, i.e., ItemID, WeaponID
-                        $unique_key = array_key_first($db_values);
-
-                        // map to dir/file entry in data_files
-                        $file_id = DataFile::where('filename', $file)->first()?->id;
-                        $db_values ['file_id'] = $file_id;
-
-                        // map to localization files
-                        $localization_id = Localization::where(
-                            'id_key',
-                            'like',
-                            '%' . basename($unique_key, '.json') . '%'
-                        )->first()?->id;
-                        $db_values ['localization_id'] = $localization_id;
-
-                        try {
-                            DB::table($table_name)->upsert($db_values, [$unique_key]);
-                        } catch ( \Throwable $throwable ) {
-                            dump(
-                                'ERROR OCCURRED: ' 
-                                    . substr($throwable->getMessage(), 0, 300),
-                                    'Error code: ' . $throwable->getCode()
-                                    . ' -- on line: ' . $throwable->getLine()
-                                    . ' -- in file: ' . $throwable->getFile()
-                            );
-                        }
-                    } // foreach values
-                } // foreach combo
-            }
-        } // foreach combos
-    }
+                try {
+                    DB::table($table_name)->upsert($db_values, [$unique_key]);
+                } catch ( \Throwable $throwable ) {
+                    dump(
+                        'ERROR OCCURRED: ' 
+                            . substr($throwable->getMessage(), 0, 300),
+                            'Error code: ' . $throwable->getCode()
+                            . ' -- on line: ' . $throwable->getLine()
+                            . ' -- in file: ' . $throwable->getFile()
+                    );
+                }
+            } // foreach values
+        } // foreach combo
+    } // foreach combos    
 }
