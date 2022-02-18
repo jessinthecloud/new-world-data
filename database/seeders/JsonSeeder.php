@@ -189,10 +189,11 @@ class JsonSeeder extends Seeder
                             DB::table($table_name)->upsert($db_values, [$unique_key]);
                         } catch ( \Throwable $throwable ) {
                             dump(
-                                'ERROR OCCURRED: ' . substr($throwable->getMessage(), 0, 300),
-                                'Error code: ' . $throwable->getCode()
-                                . ' -- on line: ' . $throwable->getLine()
-                                . ' -- in file: ' . $throwable->getFile()
+                                'ERROR OCCURRED: ' 
+                                    . substr($throwable->getMessage(), 0, 300),
+                                    'Error code: ' . $throwable->getCode()
+                                    . ' -- on line: ' . $throwable->getLine()
+                                    . ' -- in file: ' . $throwable->getFile()
                             );
                         }
                     } // foreach values

@@ -54,10 +54,9 @@ class JsonFileParser implements FileParserContract
             $combo []= [
                 'dir' => $dir,
                 'file' => $filename,
-                'table' => $table_name,
+                'table' => ['name' => $table_name, 'columns'=>$columns],
                 'values' => $values,
             ];
-
 
         } // end foreach file
       
