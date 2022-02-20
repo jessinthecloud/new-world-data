@@ -45,7 +45,7 @@ class TableBuilder
     {
         $tables_data = [];
         
-        foreach($data_array as $index => $data){
+        foreach($data_array as $data_index => $data){
             $dir = $data['dir'];
             $file = $data['file'];
             $table_name = $data['table']['name'];
@@ -56,13 +56,13 @@ class TableBuilder
             $tables_data [$table_name]['columns']=[];
             $tables_data [$table_name]['foreign_keys']=[];
 
-            foreach($column_names as $column_name) {
+            foreach($column_names as $index => $column_name) {
             
             //-- find column info; type, size
                 $column_data = $this->findColumnInfo($column_name, $values);
                 $column_data['name'] = $column_name;
                 // first key is the unique index (probably...)
-                $column_data['unique'] = array_key_first($column_names) == $column_name 
+                $column_data['unique'] = ($index === 0) 
                     ? Str::random(8).'_uni'
                     : null; 
 
