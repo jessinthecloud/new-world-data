@@ -2,6 +2,8 @@
 
 namespace App;
 
+use Illuminate\Support\Str;
+
 class SchemaBuilder
 {
     /******************
@@ -45,26 +47,63 @@ class SchemaBuilder
             dump($table_name, $column_names);
             
         // CREATE TABLES DEFINITIONS 
-            $table_data [$table_name]=[];
+            $table_data [$table_name]['columns']=[];
+            $table_data [$table_name]['foreign_keys']=[];
 
             foreach($column_names as $column_name) {
 dump('NAME: '.$column_name, array_column($values, $column_name));
-            //-- find column type per key (based on value)
+
+            //-- find column info; type, size
                 $column_data = $this->findColumnInfo($column_name, $values);
-                // column type (method name)
-                $column_type = $column_data['type'];
-                // max column size
-                $column_size = $column_data['size'];
+                // first key is the unique index (probably...)
+                $column_data['unique'] = array_key_first($column_names) == $column_name 
+                    ? Str::random(8).'_uni'
+                    : null; 
 dump($column_data);
-                // TODO: add known foreign key definitions
                 
+                $table_data [$table_name]['columns'][]= $column_data;
+                
+                // TODO: find dynamic foreign key column definitions
                 // TODO: find dynamic foreign key definitions
-                
-                // TODO: loop for create table first, then loop for updating table to add foreign keys
-                //       to ensure the referenced tables/columns exist
-                 
+
             } // end foreach column names
-        }
+            
+            // localizations FK column
+            $table_data [$table_name]['columns'][]= [
+                'name' => 'localization_id',
+                'type' => 'unsignedBigInteger',
+                'size' => null,
+            ];
+            // data_files FK column
+            $table_data [$table_name]['columns'][]= [
+                'name' => 'data_file_id',
+                'type' => 'unsignedBigInteger',
+                'size' => null,
+            ];
+            
+            /*
+             * add known foreign key definitions
+             * 
+             * named with random strings because using
+             * table+col name makes them too long
+             */
+            // localizations FK
+            $table_data [$table_name]['foreign_keys'][] =[
+                'name' => 'fk_'.Str::random(8).'_localization_id',
+                'references' => 'id',
+                'on' => 'localizations',
+            ];
+            // data_files FK
+            $table_data [$table_name]['foreign_keys'][] =[
+                'name' => 'fk_'.Str::random(8).'_file_id',
+                'references' => 'id',
+                'on' => 'data_files',
+            ];
+            
+            // TODO: loop for create table first, then loop for updating table to add foreign keys
+            //       to ensure the referenced tables/columns exist
+            
+        } // end foreach data
     } 
     
     protected function findColumnInfo(string $column_name, array $values) : array
