@@ -26,6 +26,12 @@ class JsonFileParser implements FileParserContract
         
         // get all files from dir and subdirectories
         $files = File::allFiles($dir);
+        
+        if(empty(array_filter($files))){
+            // skip empty dirs
+            return [];
+        }
+        
         $data_files = [];
         $combo = [];
         $columns = [];
@@ -44,8 +50,15 @@ class JsonFileParser implements FileParserContract
             
             dump("Parsing {$filename}...");
             $values = array_filter($this->parseFile($filepath));
+            
+            if(empty($values)){
+                // skip empty files
+                continue;
+            }
 
             foreach($values as $index => $value_array){
+                // combine with existing columns so that files with
+                // extra/unusual columns don't get left out
                 $columns = array_unique(array_merge($columns, array_keys($value_array)));
             }
            

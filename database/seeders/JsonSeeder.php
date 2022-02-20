@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\DataFile;
 use App\Models\Localization;
 use App\Parsers\JsonFileParser;
+use App\SchemaBuilder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
@@ -91,8 +92,12 @@ class JsonSeeder extends Seeder
             $tables = array_merge($tables, $parsed_data['tables']);
         } // end foreach dir
         
-        $combos = collect($combos)->flatten(1);
-
+        $combos = collect($combos)->flatten(1)->all();
+        
+        $sb = new SchemaBuilder();
+        $sb->createTableInfo($combos);
+/////////////////////////////////////
+die;        
         dump("Upserting ".basename($dir)." filenames...");
         
         foreach($combos as $index => $combo) {
@@ -129,6 +134,7 @@ class JsonSeeder extends Seeder
                             . ' -- on line: ' . $throwable->getLine()
                             . ' -- in file: ' . $throwable->getFile()
                     );
+                    die;
                 }
             } // foreach values
         } // foreach combo
