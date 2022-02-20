@@ -5,6 +5,7 @@ namespace App;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder as SchemaBuilder;
 use Illuminate\Database\Schema\ForeignKeyDefinition;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -51,15 +52,12 @@ class TableBuilder
             $column_names = $data['table']['columns'];
             $values = $data['values'];
             
-//            dump($table_name, $column_names);
-            
         // CREATE TABLES DEFINITIONS 
             $tables_data [$table_name]['columns']=[];
             $tables_data [$table_name]['foreign_keys']=[];
 
             foreach($column_names as $column_name) {
-//dump('NAME: '.$column_name, array_column($values, $column_name));
-
+            
             //-- find column info; type, size
                 $column_data = $this->findColumnInfo($column_name, $values);
                 $column_data['name'] = $column_name;
@@ -67,11 +65,18 @@ class TableBuilder
                 $column_data['unique'] = array_key_first($column_names) == $column_name 
                     ? Str::random(8).'_uni'
                     : null; 
-//dump($column_data);
 
                 $tables_data [$table_name]['columns'][]= $column_data;
 
                 // TODO: find & add dynamic foreign key column definitions
+                /*
+                   $tables_data [$table_name]['foreign_keys'][] =[
+                        'name' => 'fk_'.$table_name.'_localization_id',
+                        'column_name' => 'localization_id',
+                        'references' => 'id',
+                        'on' => 'localizations',
+                    ];
+                 */
                 // TODO: find & add dynamic foreign key definitions
 
             } // end foreach column names
@@ -93,20 +98,17 @@ class TableBuilder
             
             /*
              * add known foreign key definitions
-             * 
-             * named with random strings because using
-             * table+col name makes them too long
              */
             // localizations FK
             $tables_data [$table_name]['foreign_keys'][] =[
-                'name' => 'fk_'.Str::random(8).'_localization_id',
+                'name' => 'fk_'.$table_name.'_localization_id',
                 'column_name' => 'localization_id',
                 'references' => 'id',
                 'on' => 'localizations',
             ];
             // data_files FK
             $tables_data [$table_name]['foreign_keys'][] =[
-                'name' => 'fk_'.Str::random(8).'_file_id',
+                'name' => 'fk_'.$table_name.'_file_id',
                 'column_name' => 'data_file_id',
                 'references' => 'id',
                 'on' => 'data_files',
@@ -123,9 +125,6 @@ class TableBuilder
 
         // create the tables
         foreach($tables_data as $table_name => $table_data){
-            if(Schema::hasTable($table_name)){
-                continue;
-            }
             $this->createTable($table_name, $table_data);
         }
 
@@ -135,22 +134,13 @@ class TableBuilder
         }
     }
     
-    /* EXAMPLE: 
-     * $tables_data [$table_name]['columns'][]= [
-        'name' => 'data_file_id',
-        'type' => 'unsignedBigInteger',
-        'size' => null,
-    ];
-    $tables_data [$table_name]['foreign_keys'][] =[
-        'name' => 'fk_'.Str::random(8).'_file_id',
-        'column_name' => 'data_file_id',
-        'references' => 'id',
-        'on' => 'data_files',
-    ];
-     */
     protected function createTable(string $table_name, array $table_data)
-    {
+    {        
         dump("Creating table {$table_name}...", $table_data['columns']);
+
+        // drop table if exists to avoid foreign key collisions
+        //       since we can't check for them
+        Schema::dropIfExists($table_name);
         
         Schema::create($table_name, function (Blueprint $table) use ($table_name, $table_data) {
         
@@ -158,8 +148,6 @@ class TableBuilder
         
             // remove spaces from keys
             $columns_data = $this->ensureValidColumnNames($columns_data);
-            
-            // todo: make sure column names are not dupes?
                             
             // still auto inc primary key
             $table->id();
@@ -226,7 +214,7 @@ class TableBuilder
         $max = max(array_map(function($val) use ($has_decimal) {
             return $has_decimal ? floatval($val) : intval($val);
         }, $column_values));
-//dump('MAX: '.$max);
+        
         $unsigned = empty(array_filter($column_values, function($val) use ($has_decimal) {
             // check for negative sign
             return str_contains(($has_decimal ? floatval($val) : intval($val)), '-');
@@ -269,7 +257,7 @@ class TableBuilder
     
         // longest string
         $max = max(array_map('strlen', $column_values));
-//dump('MAX LENGTH: '.$max);        
+        
         $type = match(true){
             $max <= 255 => 'string',
             $max > 255 && $max < 65536 => 'text',
@@ -306,8 +294,6 @@ class TableBuilder
                 ];
              */
             foreach ( $foreign_keys_data as $index => $foreign_key_data ) {
-                // drop if exists
-                // dropForeign
                 $this->addForeignKeyToTable($table, $table_name, $foreign_key_data);                
             } // end foreach foreign key
         });
@@ -318,12 +304,18 @@ class TableBuilder
     protected function addForeignKeyToTable(Blueprint $table, string $table_name, array $foreign_key_data) : void
     {
         dump("Adding foreign key {$foreign_key_data['name']} ({$foreign_key_data['column_name']}) to table {$table_name}...");
-                
+
         $fk_name = $foreign_key_data['name'];
         $column_name = $foreign_key_data['column_name'];
         $fk_references = $foreign_key_data['references'];
         $fk_on = $foreign_key_data['on'];
-
+        
+        // drop if exists
+        // sail user does not have select permissions on information_schema in docker
+        /*if(Schema::hasColumn($table_name, $column_name) 
+            && $this->hasForeignKey($table_name, $fk_name)){
+            $table->dropForeign($fk_name);
+        }*/
         // define constraint
         $table->foreign($column_name, $fk_name)->references($fk_references)->on($fk_on);
         // $table->foreign('localization_id', 'fk_'.Str::random(8).'_localize_id')->references('id')->on('localizations');
@@ -340,10 +332,26 @@ class TableBuilder
         }
         
         if(isset($column_unique_name)){
+dump("has unique name: $column_unique_name ($column_name)");        
             // this column is the ID field for the JSON file
             $column->unique($column_unique_name);
         }
         
         return $table;
     }
+    
+    /*// sail user does not have select permissions on information_schema in docker...
+    protected function getForeignKeys(string $table_name)
+    {
+        // SELECT CONSTRAINT_NAME FROM `information_schema`.`KEY_COLUMN_USAGE` WHERE `constraint_schema` = SCHEMA() AND `table_name` = ? AND `referenced_column_name` IS NOT NULL;
+        return DB::table("information_schema.KEY_COLUMN_USAGE")
+            ->select("CONSTRAINT_NAME")
+            ->whereRaw("constraint_schema = SCHEMA() AND table_name = ? AND referenced_column_name IS NOT NULL", $table_name)
+            ->get()->all();
+    }
+    
+    protected function hasForeignKey(string $table_name, string $fk_name) : bool
+    {
+        return in_array($fk_name, $this->getForeignKeys($table_name));
+    }*/
 }

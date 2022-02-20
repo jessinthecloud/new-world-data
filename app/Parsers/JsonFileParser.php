@@ -43,6 +43,11 @@ class JsonFileParser implements FileParserContract
             $dir = basename(dirname($filepath));
             $table_name = basename($filename, '.json');
             
+            // don't create weird tables
+            if( !$this->hasValidTableName($table_name)){
+                continue;
+            }
+            
             $data_files []= [
                 'directory' => $dir,
                 'filename' => $filename,
@@ -86,5 +91,10 @@ class JsonFileParser implements FileParserContract
     public function parseFiles(array $filepaths)
     {
         // TODO: Implement parseFiles() method.
+    }
+
+    private function hasValidTableName(string $table_name) : bool
+    {
+        return !Str::contains($table_name, ['(',' ', ':'], true);
     }
 }
