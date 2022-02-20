@@ -63,7 +63,7 @@ class TableBuilder
                 $column_data['name'] = $column_name;
                 // first key is the unique index (probably...)
                 $column_data['unique'] = ($index === 0) 
-                    ? Str::random(8).'_uni'
+                    ? 'uni_'.$table_name.'_'.Str::limit($column_name, 20, '')
                     : null; 
 
                 $tables_data [$table_name]['columns'][]= $column_data;
@@ -136,7 +136,7 @@ class TableBuilder
     
     protected function createTable(string $table_name, array $table_data)
     {        
-        dump("Creating table {$table_name}...", $table_data['columns']);
+        dump("Creating table {$table_name}..."/*, $table_data['columns']*/);
 
         // drop table if exists to avoid foreign key collisions
         //       since we can't check for them
@@ -332,7 +332,6 @@ class TableBuilder
         }
         
         if(isset($column_unique_name)){
-dump("has unique name: $column_unique_name ($column_name)");        
             // this column is the ID field for the JSON file
             $column->unique($column_unique_name);
         }
