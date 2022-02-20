@@ -5,7 +5,7 @@ namespace Database\Seeders;
 use App\Models\DataFile;
 use App\Models\Localization;
 use App\Parsers\JsonFileParser;
-use App\SchemaBuilder;
+use App\TableBuilder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Arr;
@@ -94,8 +94,9 @@ class JsonSeeder extends Seeder
         
         $combos = collect($combos)->flatten(1)->all();
         
-        $sb = new SchemaBuilder();
-        $sb->createTableInfo($combos);
+        $sb = new TableBuilder(config());
+        $table_data = $sb->createTableInfo($combos);
+        $sb->createTables($table_data);
 /////////////////////////////////////
 die;        
         dump("Upserting ".basename($dir)." filenames...");

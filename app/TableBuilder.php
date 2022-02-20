@@ -2,10 +2,15 @@
 
 namespace App;
 
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\Builder as SchemaBuilder;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
-class SchemaBuilder
+class TableBuilder
 {
+    public function __construct(protected ?SchemaBuilder $Schema=null) { }
+
     /******************
      * Definitions
      ******************
@@ -36,7 +41,8 @@ class SchemaBuilder
 
     public function createTableInfo(array $data_array)
     {
-        $table_data = [];
+        $tables_data = [];
+        
         foreach($data_array as $index => $data){
             $dir = $data['dir'];
             $file = $data['file'];
@@ -47,8 +53,8 @@ class SchemaBuilder
             dump($table_name, $column_names);
             
         // CREATE TABLES DEFINITIONS 
-            $table_data [$table_name]['columns']=[];
-            $table_data [$table_name]['foreign_keys']=[];
+            $tables_data [$table_name]['columns']=[];
+            $tables_data [$table_name]['foreign_keys']=[];
 
             foreach($column_names as $column_name) {
 dump('NAME: '.$column_name, array_column($values, $column_name));
@@ -61,21 +67,21 @@ dump('NAME: '.$column_name, array_column($values, $column_name));
                     : null; 
 dump($column_data);
                 
-                $table_data [$table_name]['columns'][]= $column_data;
+                $tables_data [$table_name]['columns'][]= $column_data;
                 
-                // TODO: find dynamic foreign key column definitions
-                // TODO: find dynamic foreign key definitions
+                // TODO: find & add dynamic foreign key column definitions
+                // TODO: find & add dynamic foreign key definitions
 
             } // end foreach column names
             
             // localizations FK column
-            $table_data [$table_name]['columns'][]= [
+            $tables_data [$table_name]['columns'][]= [
                 'name' => 'localization_id',
                 'type' => 'unsignedBigInteger',
                 'size' => null,
             ];
             // data_files FK column
-            $table_data [$table_name]['columns'][]= [
+            $tables_data [$table_name]['columns'][]= [
                 'name' => 'data_file_id',
                 'type' => 'unsignedBigInteger',
                 'size' => null,
@@ -88,23 +94,112 @@ dump($column_data);
              * table+col name makes them too long
              */
             // localizations FK
-            $table_data [$table_name]['foreign_keys'][] =[
+            $tables_data [$table_name]['foreign_keys'][] =[
                 'name' => 'fk_'.Str::random(8).'_localization_id',
+                'column_name' => 'localization_id',
                 'references' => 'id',
                 'on' => 'localizations',
             ];
             // data_files FK
-            $table_data [$table_name]['foreign_keys'][] =[
+            $tables_data [$table_name]['foreign_keys'][] =[
                 'name' => 'fk_'.Str::random(8).'_file_id',
+                'column_name' => 'data_file_id',
                 'references' => 'id',
                 'on' => 'data_files',
             ];
             
-            // TODO: loop for create table first, then loop for updating table to add foreign keys
-            //       to ensure the referenced tables/columns exist
-            
         } // end foreach data
+        
+        return $tables_data;
     } 
+    
+    public function createTables(array $tables_data){
+        // TODO: loop to create table first, then loop for updating table to add foreign keys
+        //       to ensure the referenced tables/columns exist
+
+        // create the tables
+        foreach($tables_data as $table_name => $table_data){
+            $this->createTable($table_name, $table_data);
+        }
+
+        // add any foreign keys to the tables
+        foreach($tables_data as $table_name => $table_data){
+            $this->addForeignKeysToTable($table_name, $table_data);
+        }
+    }
+    
+    /* EXAMPLE: 
+     * $tables_data [$table_name]['columns'][]= [
+        'name' => 'data_file_id',
+        'type' => 'unsignedBigInteger',
+        'size' => null,
+    ];
+    $tables_data [$table_name]['foreign_keys'][] =[
+        'name' => 'fk_'.Str::random(8).'_file_id',
+        'column_name' => 'data_file_id',
+        'references' => 'id',
+        'on' => 'data_files',
+    ];
+     */
+    protected function createTable(string $table_name, array $table_data)
+    {
+        Schema::create($table_name, function (Blueprint $table) use ($table_name, $table_data) {
+        
+            $columns_data = $table_data['columns'];
+        
+            // make sure column names are valid
+            $columns_data = $this->ensureValidColumnNames($columns_data);
+            
+            // todo: make sure column names are not dupes?
+                            
+            // still auto inc primary key
+            $table->id();
+            
+            /*// link back to file it comes from
+            $table->bigInteger('file_id')->nullable()->unsigned();
+            $table->foreign('file_id', 'fk_'.Str::random(8).'_file_id')->references('id')->on('data_files');
+            
+            // link to localization entry
+            $table->bigInteger('localization_id')->nullable()->unsigned();
+            // need manually done bc auto-gen name is too long
+            $table->foreign('localization_id', 'fk_'.Str::random(8).'_localize_id')->references('id')->on('localizations');*/
+            
+            foreach ( $columns_data as $index => $column_data ) {
+
+                $column_type = $column_data['type'];
+                $column_name = $column_data['name'];
+                $column_size = $column_data['size'];
+                $column_unique_name = $column_data['unique'];
+            
+                if (Schema::hasColumn($table_name, $column_name) ) {
+                    continue;
+                }
+                
+                // define column
+                $column = $table->$column_type($column_name, $column_size)->nullable(); 
+
+                if(isset($column_unique_name)){
+                    // this column is the ID field for the JSON file
+                    $column->unique($column_unique_name);
+                }
+            } // end foreach column
+            
+            // created/updated
+            $table->timestamps();
+        });
+        dump("{$table_name} table created.");
+    }
+    
+    protected function ensureValidColumnNames(array $columns_data) : array
+    {
+        array_walk($columns_data, function(&$column_data){
+            $column_data['name'] = Str::replace(' ', '_', $column_data['name']);
+        });
+
+        // todo: make sure values keys are also converted so that they match when compared
+        
+        return $columns_data;
+    }
     
     protected function findColumnInfo(string $column_name, array $values) : array
     {
@@ -186,5 +281,42 @@ dump('MAX LENGTH: '.$max);
             // # of chars 
             'size'=>$max,
         ];
+    }
+     
+    /**
+     * Add foreign key constraints to an existing database table
+     * 
+     * @param string $table_name
+     * @param array  $table_data
+     *
+     * @return void
+     */
+    protected function addForeignKeysToTable(string $table_name, array $table_data)
+    {
+        Schema::table($table_name, function (Blueprint $table) use ($table_name, $table_data) {
+        
+            $foreign_keys_data = $table_data['foreign_keys'];
+            /* example: 
+                $tables_data [$table_name]['foreign_keys'][] =[
+                    'name' => 'fk_'.Str::random(8).'_file_id',
+                    'column_name' => 'data_file_id',
+                    'references' => 'id',
+                    'on' => 'data_files',
+                ];
+             */
+            foreach ( $foreign_keys_data as $index => $foreign_key_data ) {
+                
+                $fk_name = $foreign_key_data['name'];
+                $column_name = $foreign_key_data['column_name'];
+                $fk_references = $foreign_key_data['references'];
+                $fk_on = $foreign_key_data['on'];
+
+                // define constraint
+                $table->foreign($column_name, $fk_name)->references($fk_references)->on($fk_on);
+                // $table->foreign('localization_id', 'fk_'.Str::random(8).'_localize_id')->references('id')->on('localizations');
+                
+            } // end foreach foreign key
+        });
+        dump("{$table_name} table foreign keys added.");
     }
 }
