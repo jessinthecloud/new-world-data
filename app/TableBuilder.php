@@ -40,7 +40,7 @@ class TableBuilder
      *                      when file name does not match
      */
 
-    public function createTableInfo(array $data_array)
+    public function createTableInfo(array $data_array) : array
     {
         $tables_data = [];
         
@@ -123,6 +123,9 @@ class TableBuilder
 
         // create the tables
         foreach($tables_data as $table_name => $table_data){
+            if(Schema::hasTable($table_name)){
+                continue;
+            }
             $this->createTable($table_name, $table_data);
         }
 
@@ -147,7 +150,7 @@ class TableBuilder
      */
     protected function createTable(string $table_name, array $table_data)
     {
-        dump("Creating table {$table_name}...");
+        dump("Creating table {$table_name}...", $table_data['columns']);
         
         Schema::create($table_name, function (Blueprint $table) use ($table_name, $table_data) {
         
@@ -171,14 +174,10 @@ class TableBuilder
                 if (Schema::hasColumn($table_name, $column_name) ) {
                     continue;
                 }
-                
-                // define column
-                $column = $table->$column_type($column_name, $column_size)->nullable(); 
 
-                if(isset($column_unique_name)){
-                    // this column is the ID field for the JSON file
-                    $column->unique($column_unique_name);
-                }
+                // define column
+                $table = $this->createColumn($table, $column_name, $column_type, $column_size, $column_unique_name);
+                
             } // end foreach column
             
             // created/updated
@@ -189,7 +188,6 @@ class TableBuilder
     
     protected function ensureValidColumnNames(array $columns_data) : array
     {
-    dump($columns_data);
         array_walk($columns_data, function(&$column_data){
             $column_data['name'] = Str::replace(' ', '_', $column_data['name']);
         });
@@ -216,7 +214,9 @@ class TableBuilder
             // no values
             return [
                 'type'=>'tinyInteger',
-                'size'=>1,
+                // tiny int must not have size so that size arg passed
+                // to tinyInteger() doesn't trigger auto_increment being set
+                'size'=>false,
             ];
         }
     
@@ -245,12 +245,15 @@ class TableBuilder
         if($unsigned){
             $type = 'unsigned'.ucFirst($type);
         }
+        // # of digits 
+        // not including sign, commas, or decimal points
+        $size = strlen(str_replace(['-','.',','], '', $max));
         
         return [
             'type'=>$type,
             // # of digits 
-            // not including sign, commas, or decimal points
-            'size'=>strlen(str_replace(['-','.',','], '', $max)),
+            // float must be at least 2 (M must be >= D in column definition)
+            'size'=> $has_decimal ? max($size, 2) : $size,
         ];
     }
 
@@ -303,6 +306,8 @@ class TableBuilder
                 ];
              */
             foreach ( $foreign_keys_data as $index => $foreign_key_data ) {
+                // drop if exists
+                // dropForeign
                 $this->addForeignKeyToTable($table, $table_name, $foreign_key_data);                
             } // end foreach foreign key
         });
@@ -322,5 +327,23 @@ class TableBuilder
         // define constraint
         $table->foreign($column_name, $fk_name)->references($fk_references)->on($fk_on);
         // $table->foreign('localization_id', 'fk_'.Str::random(8).'_localize_id')->references('id')->on('localizations');
+    }
+
+    protected function createColumn($table, $column_name, $column_type, $column_size, $column_unique_name=null)
+    {
+        if(str_contains(strtolower($column_type), 'integer')) {
+            // prevent int with size setting auto_increment=true
+            $column = $table->$column_type($column_name)->nullable();
+        }
+        else{
+            $column = $table->$column_type($column_name, $column_size)->nullable();
+        }
+        
+        if(isset($column_unique_name)){
+            // this column is the ID field for the JSON file
+            $column->unique($column_unique_name);
+        }
+        
+        return $table;
     }
 }
