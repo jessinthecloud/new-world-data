@@ -67,20 +67,13 @@ class TableBuilder
                     : null; 
 
                 $tables_data [$table_name]['columns'][]= $column_data;
-
-                // TODO: find & add dynamic foreign key column definitions
-                /*
-                   $tables_data [$table_name]['foreign_keys'][] =[
-                        'name' => 'fk_'.$table_name.'_localization_id',
-                        'column_name' => 'localization_id',
-                        'references' => 'id',
-                        'on' => 'localizations',
-                    ];
-                 */
-                // TODO: find & add dynamic foreign key definitions
-
+                
             } // end foreach column names
-            
+
+            // TODO: find & add dynamic foreign key definitions
+            //       (columns already exist)
+            $tables_data = $this->findForeignKeys($table_name, $tables_data);
+
             // localizations FK column
             $tables_data [$table_name]['columns'][]= [
                 'name' => 'localization_id',
@@ -271,6 +264,41 @@ class TableBuilder
             'size'=>$max,
         ];
     }
+
+    /*
+       $tables_data [$table_name]['foreign_keys'][] =[
+            'name' => 'fk_'.$table_name.'_localization_id', // this table
+            'column_name' => 'localization_id', // this table
+            'references' => 'id', // related table
+            'on' => 'localizations', // related table
+        ];
+     */
+     protected function findForeignKeys(string $table_name, array $tables_data){
+        
+        $columns_data = $tables_data[$table_name]['columns'];
+        
+        foreach ( $columns_data as $index => $column_data ) {
+            $this->findForeignKey($column_data, $tables_data);
+        }
+        
+        return [];
+     }
+     
+     protected function findForeignKey(array $column_data, array $tables_data)
+     {
+        // exclude current table columns that are not unique indexes
+        $column_data = array_filter($column_data, function($key){
+            return $key == 'unique';
+        }, ARRAY_FILTER_USE_KEY);
+        
+        $column_type = $column_data['type'];
+        $column_name = $column_data['name'];
+        $column_size = $column_data['size'];
+        $column_unique_name = $column_data['unique'];
+        
+        // todo: finish
+        
+     }
      
     /**
      * Add foreign key constraints to an existing database table
