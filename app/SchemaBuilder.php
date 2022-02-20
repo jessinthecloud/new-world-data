@@ -42,20 +42,20 @@ class SchemaBuilder
             $column_names = $data['table']['columns'];
             $values = $data['values'];
             
-            dump($table_name, $column_names, $values);
+            dump($table_name, $column_names);
             
         // CREATE TABLES DEFINITIONS 
             $table_data [$table_name]=[];
 
             foreach($column_names as $column_name) {
-dump('NAME: '.$column_name);
+dump('NAME: '.$column_name, array_column($values, $column_name));
             //-- find column type per key (based on value)
                 $column_data = $this->findColumnInfo($column_name, $values);
                 // column type (method name)
                 $column_type = $column_data['type'];
                 // max column size
                 $column_size = $column_data['size'];
-
+dump($column_data);
                 // TODO: add known foreign key definitions
                 
                 // TODO: find dynamic foreign key definitions
@@ -80,13 +80,21 @@ dump('NAME: '.$column_name);
     
     protected function findNumericColumnInfo($check_value, array $column_values) : array
     {
+        if(empty(array_filter($column_values))){
+            // no values
+            return [
+                'type'=>'tinyInteger',
+                'size'=>1,
+            ];
+        }
+    
         $has_decimal = str_contains($check_value, '.');
         
-        // find the largest number by numeric value (not string) 
+        // find the largest number by numeric value (not string value) 
         $max = max(array_map(function($val) use ($has_decimal) {
             return $has_decimal ? floatval($val) : intval($val);
         }, $column_values));
-        
+dump('MAX: '.$max);
         $unsigned = empty(array_filter($column_values, function($val) use ($has_decimal) {
             // check for negative sign
             return str_contains(($has_decimal ? floatval($val) : intval($val)), '-');
@@ -109,15 +117,24 @@ dump('NAME: '.$column_name);
         return [
             'type'=>$type,
             // # of digits 
-            'size'=>strlen($max),
+            // not including sign, commas, or decimal points
+            'size'=>strlen(str_replace(['-','.',','], '', $max)),
         ];
     }
 
     protected function findTextColumnInfo($check_value, array $column_values) : array
     {
+        if(empty(array_filter($column_values))){
+            // no values
+            return [
+                'type'=>'tinyInteger',
+                'size'=>1,
+            ];
+        }
+    
         // longest string
         $max = max(array_map('strlen', $column_values));
-        
+dump('MAX LENGTH: '.$max);        
         $type = match(true){
             $max <= 255 => 'string',
             $max > 255 && $max < 65536 => 'text',
