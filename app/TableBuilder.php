@@ -4,6 +4,7 @@ namespace App;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder as SchemaBuilder;
+use Illuminate\Database\Schema\ForeignKeyDefinition;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
@@ -143,26 +144,19 @@ dump($column_data);
      */
     protected function createTable(string $table_name, array $table_data)
     {
+        dump("Creating table {$table_name}...");
+        
         Schema::create($table_name, function (Blueprint $table) use ($table_name, $table_data) {
         
             $columns_data = $table_data['columns'];
         
-            // make sure column names are valid
+            // remove spaces from keys
             $columns_data = $this->ensureValidColumnNames($columns_data);
             
             // todo: make sure column names are not dupes?
                             
             // still auto inc primary key
             $table->id();
-            
-            /*// link back to file it comes from
-            $table->bigInteger('file_id')->nullable()->unsigned();
-            $table->foreign('file_id', 'fk_'.Str::random(8).'_file_id')->references('id')->on('data_files');
-            
-            // link to localization entry
-            $table->bigInteger('localization_id')->nullable()->unsigned();
-            // need manually done bc auto-gen name is too long
-            $table->foreign('localization_id', 'fk_'.Str::random(8).'_localize_id')->references('id')->on('localizations');*/
             
             foreach ( $columns_data as $index => $column_data ) {
 
@@ -305,18 +299,24 @@ dump('MAX LENGTH: '.$max);
                 ];
              */
             foreach ( $foreign_keys_data as $index => $foreign_key_data ) {
-                
-                $fk_name = $foreign_key_data['name'];
-                $column_name = $foreign_key_data['column_name'];
-                $fk_references = $foreign_key_data['references'];
-                $fk_on = $foreign_key_data['on'];
-
-                // define constraint
-                $table->foreign($column_name, $fk_name)->references($fk_references)->on($fk_on);
-                // $table->foreign('localization_id', 'fk_'.Str::random(8).'_localize_id')->references('id')->on('localizations');
-                
+                $this->addForeignKeyToTable($table, $table_name, $foreign_key_data);                
             } // end foreach foreign key
         });
+        
         dump("{$table_name} table foreign keys added.");
+    }
+
+    protected function addForeignKeyToTable(Blueprint $table, string $table_name, array $foreign_key_data) : void
+    {
+        dump("Adding foreign key {$foreign_key_data['name']} ({$foreign_key_data['column_name']}) to table {$table_name}...");
+                
+        $fk_name = $foreign_key_data['name'];
+        $column_name = $foreign_key_data['column_name'];
+        $fk_references = $foreign_key_data['references'];
+        $fk_on = $foreign_key_data['on'];
+
+        // define constraint
+        $table->foreign($column_name, $fk_name)->references($fk_references)->on($fk_on);
+        // $table->foreign('localization_id', 'fk_'.Str::random(8).'_localize_id')->references('id')->on('localizations');
     }
 }
