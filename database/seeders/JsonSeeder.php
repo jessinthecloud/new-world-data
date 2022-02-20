@@ -94,7 +94,7 @@ class JsonSeeder extends Seeder
         
         $combos = collect($combos)->flatten(1)->all();
         
-        $sb = new TableBuilder(config());
+        $sb = new TableBuilder();
         $table_data = $sb->createTableInfo($combos);
         $sb->createTables($table_data);
 /////////////////////////////////////

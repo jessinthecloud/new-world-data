@@ -51,25 +51,26 @@ class TableBuilder
             $column_names = $data['table']['columns'];
             $values = $data['values'];
             
-            dump($table_name, $column_names);
+//            dump($table_name, $column_names);
             
         // CREATE TABLES DEFINITIONS 
             $tables_data [$table_name]['columns']=[];
             $tables_data [$table_name]['foreign_keys']=[];
 
             foreach($column_names as $column_name) {
-dump('NAME: '.$column_name, array_column($values, $column_name));
+//dump('NAME: '.$column_name, array_column($values, $column_name));
 
             //-- find column info; type, size
                 $column_data = $this->findColumnInfo($column_name, $values);
+                $column_data['name'] = $column_name;
                 // first key is the unique index (probably...)
                 $column_data['unique'] = array_key_first($column_names) == $column_name 
                     ? Str::random(8).'_uni'
                     : null; 
-dump($column_data);
-                
+//dump($column_data);
+
                 $tables_data [$table_name]['columns'][]= $column_data;
-                
+
                 // TODO: find & add dynamic foreign key column definitions
                 // TODO: find & add dynamic foreign key definitions
 
@@ -80,12 +81,14 @@ dump($column_data);
                 'name' => 'localization_id',
                 'type' => 'unsignedBigInteger',
                 'size' => null,
+                'unique' => null,
             ];
             // data_files FK column
             $tables_data [$table_name]['columns'][]= [
                 'name' => 'data_file_id',
                 'type' => 'unsignedBigInteger',
                 'size' => null,
+                'unique' => null,
             ];
             
             /*
@@ -186,6 +189,7 @@ dump($column_data);
     
     protected function ensureValidColumnNames(array $columns_data) : array
     {
+    dump($columns_data);
         array_walk($columns_data, function(&$column_data){
             $column_data['name'] = Str::replace(' ', '_', $column_data['name']);
         });
@@ -222,7 +226,7 @@ dump($column_data);
         $max = max(array_map(function($val) use ($has_decimal) {
             return $has_decimal ? floatval($val) : intval($val);
         }, $column_values));
-dump('MAX: '.$max);
+//dump('MAX: '.$max);
         $unsigned = empty(array_filter($column_values, function($val) use ($has_decimal) {
             // check for negative sign
             return str_contains(($has_decimal ? floatval($val) : intval($val)), '-');
@@ -262,7 +266,7 @@ dump('MAX: '.$max);
     
         // longest string
         $max = max(array_map('strlen', $column_values));
-dump('MAX LENGTH: '.$max);        
+//dump('MAX LENGTH: '.$max);        
         $type = match(true){
             $max <= 255 => 'string',
             $max > 255 && $max < 65536 => 'text',
