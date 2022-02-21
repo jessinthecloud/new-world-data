@@ -49,16 +49,16 @@ class JsonSeeder extends Seeder
             $base_dir.DIRECTORY_SEPARATOR.'ArmorItemDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'AttributeDefinition',
 //            $base_dir.DIRECTORY_SEPARATOR.'BlueprintItemDefinitions',
-            $base_dir.DIRECTORY_SEPARATOR.'ConsumableItemDefinitions',
+//            $base_dir.DIRECTORY_SEPARATOR.'ConsumableItemDefinitions',
 //            $base_dir.DIRECTORY_SEPARATOR.'CraftingCategoryData',
 //            $base_dir.DIRECTORY_SEPARATOR.'CraftingRecipeData',
             $base_dir.DIRECTORY_SEPARATOR.'DamageTypeData',
-            $base_dir.DIRECTORY_SEPARATOR.'GearScoreUpgradeDefinition',
-            $base_dir.DIRECTORY_SEPARATOR.'ItemTransform',
+//            $base_dir.DIRECTORY_SEPARATOR.'GearScoreUpgradeDefinition',
+//            $base_dir.DIRECTORY_SEPARATOR.'ItemTransform',
             $base_dir.DIRECTORY_SEPARATOR.'MasterItemDefinitions',
 //            $base_dir.DIRECTORY_SEPARATOR.'PerkBucketData', // row size too large
             $base_dir.DIRECTORY_SEPARATOR.'PerkData',
-            $base_dir.DIRECTORY_SEPARATOR.'ResourceItemDefinitions',
+//            $base_dir.DIRECTORY_SEPARATOR.'ResourceItemDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'SkillData',
 //            $base_dir.DIRECTORY_SEPARATOR.'SkillExperienceData', // level up values
             $base_dir.DIRECTORY_SEPARATOR.'StatusEffectCategoryData',
@@ -70,9 +70,9 @@ class JsonSeeder extends Seeder
 //            $base_dir.DIRECTORY_SEPARATOR.'TradeskillRankData',
             
             // war board 
-            $base_dir.DIRECTORY_SEPARATOR.'ContributionData',
-            $base_dir.DIRECTORY_SEPARATOR.'WarboardStatDefinitions',
-            $base_dir.DIRECTORY_SEPARATOR.'GameModeData',
+//            $base_dir.DIRECTORY_SEPARATOR.'ContributionData',
+//            $base_dir.DIRECTORY_SEPARATOR.'WarboardStatDefinitions',
+//            $base_dir.DIRECTORY_SEPARATOR.'GameModeData',
         ];
         
         $parser = new JsonFileParser();

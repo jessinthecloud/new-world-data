@@ -308,13 +308,13 @@ class TableBuilder
 
     public function createForeignKeysInfo(array $data_array, array $tables_data) : array
     {
-        dump("Creating Foreign key info...");
+//        dump("Creating Foreign key info...");
         
         if(!Schema::hasTable('foreign_key_map')){
             Schema::create('foreign_key_map', function (Blueprint $table) {
                 $table->id();
                 $table->string('name')->unique();
-                $table->string('table_name');
+                $table->string('table_name')->index();
                 $table->string('column_name');
                 $table->string('references_column');
                 $table->string('on_table');
@@ -327,6 +327,13 @@ class TableBuilder
         foreach($data_array as $data_index => $data){
             $table_name = $data['table']['name'];
             $values = $data['values'];
+
+            if(DB::table('foreign_key_map')
+                ->where('table_name', $table_name)
+                ->count() > 0){
+                // we already found foreign keys for this table
+                continue;
+            }
             
             dump("Finding foreign keys for $table_name...");
 
@@ -380,15 +387,7 @@ class TableBuilder
             $this->addForeignKeysToTable($table_name, $table_data);
         }
     }
-
-    /*
-       $tables_data [$table_name]['foreign_keys'][] =[
-            'name' => 'fk_'.$table_name.'_localization_id', // this table
-            'column_name' => 'localization_id', // this table
-            'references' => 'id', // related table
-            'on' => 'localizations', // related table
-        ];
-     */
+    
      protected function findForeignKeys(string $table_name, array $tables_data, array $values, array $data_array) : array
      {
         // exclude current table columns that are not unique indexes
@@ -421,8 +420,14 @@ class TableBuilder
         /*$table_name = $data['table']['name'];
         $column_names = $data['table']['columns'];
         $values = $data['values'];*/
-       
+        
         $foreign_keys = [];
+        
+        // remove numeric values from searchable values
+        $values = array_filter($values, function($value){
+            return !is_numeric(key(array_flip($value)));
+        });
+              
         foreach($values as $column_name => $value_array){
             
             // search column's values for matching values in other tables:
