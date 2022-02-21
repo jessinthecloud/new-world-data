@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-//    $output = Artisan::call('migrate:fresh --seed');
-    $output = Artisan::call('db:seed --class=JsonSeeder');
+    $output = Artisan::call('migrate:fresh --seed');
+//    $output = Artisan::call('db:seed --class=JsonSeeder');
     echo $output;
 //    return view('welcome');
 });

@@ -15,59 +15,64 @@ class JsonSeeder extends Seeder
     {
         $base_dir = __DIR__.'/../../storage/app/json';
         $dirs = [
-            $base_dir.DIRECTORY_SEPARATOR.'AbilityData',
+
+//            $base_dir.DIRECTORY_SEPARATOR.'CategoricalProgressionData',
+//            $base_dir.DIRECTORY_SEPARATOR.'CategoricalProgressionRankData',
+//            $base_dir.DIRECTORY_SEPARATOR.'DamageData',
+//            $base_dir.DIRECTORY_SEPARATOR.'EncumbranceData',
+//            $base_dir.DIRECTORY_SEPARATOR.'EntitlementData',
+//            $base_dir.DIRECTORY_SEPARATOR.'ExperienceData',
+//            $base_dir.DIRECTORY_SEPARATOR.'FactionControlBuffDefinitions',
+//            $base_dir.DIRECTORY_SEPARATOR.'FactionData',
+//            $base_dir.DIRECTORY_SEPARATOR.'FactionStatusEffectData',
+//            $base_dir.DIRECTORY_SEPARATOR.'GameEventData', // literal events in engine
+//            $base_dir.DIRECTORY_SEPARATOR.'GatherableData',
+//            $base_dir.DIRECTORY_SEPARATOR.'KitItemDefinitions',
+//            $base_dir.DIRECTORY_SEPARATOR.'LevelDisparityData',
+//            $base_dir.DIRECTORY_SEPARATOR.'LootLimitData',
+//            $base_dir.DIRECTORY_SEPARATOR.'LootTablesData',
+//            $base_dir.DIRECTORY_SEPARATOR.'LoreItemDefinitions',
+//            $base_dir.DIRECTORY_SEPARATOR.'ProgressionPointData',
+//            $base_dir.DIRECTORY_SEPARATOR.'ProgressionPoolData',
+//            $base_dir.DIRECTORY_SEPARATOR.'RewardMilestoneData', // not items
+//            $base_dir.DIRECTORY_SEPARATOR.'RewardData', // not items
+//            $base_dir.DIRECTORY_SEPARATOR.'RewardModifierData',
+//            $base_dir.DIRECTORY_SEPARATOR.'SpecializationDefinitions',
+//            $base_dir.DIRECTORY_SEPARATOR.'SpellData',
+            
+        // -- items
+//            $base_dir.DIRECTORY_SEPARATOR.'AbilityData',
             $base_dir.DIRECTORY_SEPARATOR.'AffixData',
             $base_dir.DIRECTORY_SEPARATOR.'AffixStatData',
-            $base_dir.DIRECTORY_SEPARATOR.'AfflictionData',
-            $base_dir.DIRECTORY_SEPARATOR.'AmmoItemDefinitions',
+//            $base_dir.DIRECTORY_SEPARATOR.'AfflictionData',
+//            $base_dir.DIRECTORY_SEPARATOR.'AmmoItemDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'ArmorItemDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'AttributeDefinition',
-            $base_dir.DIRECTORY_SEPARATOR.'BlueprintItemDefinitions',
-            $base_dir.DIRECTORY_SEPARATOR.'CategoricalProgressionData',
-            $base_dir.DIRECTORY_SEPARATOR.'CategoricalProgressionRankData',
+//            $base_dir.DIRECTORY_SEPARATOR.'BlueprintItemDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'ConsumableItemDefinitions',
-            $base_dir.DIRECTORY_SEPARATOR.'ContributionData',
-            $base_dir.DIRECTORY_SEPARATOR.'CraftingCategoryData',
-            $base_dir.DIRECTORY_SEPARATOR.'CraftingRecipeData',
-            $base_dir.DIRECTORY_SEPARATOR.'DamageData',
+//            $base_dir.DIRECTORY_SEPARATOR.'CraftingCategoryData',
+//            $base_dir.DIRECTORY_SEPARATOR.'CraftingRecipeData',
             $base_dir.DIRECTORY_SEPARATOR.'DamageTypeData',
-            $base_dir.DIRECTORY_SEPARATOR.'EncumbranceData',
-            $base_dir.DIRECTORY_SEPARATOR.'EntitlementData',
-            $base_dir.DIRECTORY_SEPARATOR.'ExperienceData',
-            $base_dir.DIRECTORY_SEPARATOR.'FactionControlBuffDefinitions',
-            $base_dir.DIRECTORY_SEPARATOR.'FactionData',
-            $base_dir.DIRECTORY_SEPARATOR.'FactionStatusEffectData',
-            $base_dir.DIRECTORY_SEPARATOR.'GameEventData',
-            $base_dir.DIRECTORY_SEPARATOR.'GameModeData',
-            $base_dir.DIRECTORY_SEPARATOR.'GatherableData',
             $base_dir.DIRECTORY_SEPARATOR.'GearScoreUpgradeDefinition',
             $base_dir.DIRECTORY_SEPARATOR.'ItemTransform',
-            $base_dir.DIRECTORY_SEPARATOR.'KitItemDefinitions',
-            $base_dir.DIRECTORY_SEPARATOR.'LevelDisparityData',
-            $base_dir.DIRECTORY_SEPARATOR.'LootLimitData',
-            $base_dir.DIRECTORY_SEPARATOR.'LootTablesData',
-            $base_dir.DIRECTORY_SEPARATOR.'LoreItemDefinitions',
             $base_dir.DIRECTORY_SEPARATOR.'MasterItemDefinitions',
-            // row size too large
-//            $base_dir.DIRECTORY_SEPARATOR.'PerkBucketData',
+//            $base_dir.DIRECTORY_SEPARATOR.'PerkBucketData', // row size too large
             $base_dir.DIRECTORY_SEPARATOR.'PerkData',
-            $base_dir.DIRECTORY_SEPARATOR.'ProgressionPointData',
-            $base_dir.DIRECTORY_SEPARATOR.'ProgressionPoolData',
             $base_dir.DIRECTORY_SEPARATOR.'ResourceItemDefinitions',
-            $base_dir.DIRECTORY_SEPARATOR.'RewardData',
-            $base_dir.DIRECTORY_SEPARATOR.'RewardMilestoneData',
-            $base_dir.DIRECTORY_SEPARATOR.'RewardModifierData',
             $base_dir.DIRECTORY_SEPARATOR.'SkillData',
-            $base_dir.DIRECTORY_SEPARATOR.'SkillExperienceData',
-            $base_dir.DIRECTORY_SEPARATOR.'SpecializationDefinitions',
-            $base_dir.DIRECTORY_SEPARATOR.'SpellData',
+//            $base_dir.DIRECTORY_SEPARATOR.'SkillExperienceData', // level up values
             $base_dir.DIRECTORY_SEPARATOR.'StatusEffectCategoryData',
             $base_dir.DIRECTORY_SEPARATOR.'StatusEffectData',
-            $base_dir.DIRECTORY_SEPARATOR.'TradeSkillPostCapData',
-            $base_dir.DIRECTORY_SEPARATOR.'TradeskillRankData',
-            $base_dir.DIRECTORY_SEPARATOR.'WarboardStatDefinitions',
-            $base_dir.DIRECTORY_SEPARATOR.'WeaponEffectData',
             $base_dir.DIRECTORY_SEPARATOR.'WeaponItemDefinitions',
+            
+            // tradeskills
+//            $base_dir.DIRECTORY_SEPARATOR.'TradeSkillPostCapData',
+//            $base_dir.DIRECTORY_SEPARATOR.'TradeskillRankData',
+            
+            // war board 
+            $base_dir.DIRECTORY_SEPARATOR.'ContributionData',
+            $base_dir.DIRECTORY_SEPARATOR.'WarboardStatDefinitions',
+            $base_dir.DIRECTORY_SEPARATOR.'GameModeData',
         ];
         
         $parser = new JsonFileParser();

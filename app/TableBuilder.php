@@ -356,7 +356,7 @@ class TableBuilder
                 'on_table' => 'data_files',
                 'value' => null,
             ];
-dump($tables_data[$table_name]['foreign_keys']);
+//dump($tables_data[$table_name]['foreign_keys']);
             
             // save data
             DB::table('foreign_key_map')
