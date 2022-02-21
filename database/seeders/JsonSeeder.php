@@ -41,7 +41,7 @@ class JsonSeeder extends Seeder
 //            $base_dir.DIRECTORY_SEPARATOR.'SpellData',
             
         // -- items
-//            $base_dir.DIRECTORY_SEPARATOR.'AbilityData',
+            $base_dir.DIRECTORY_SEPARATOR.'AbilityData',
             $base_dir.DIRECTORY_SEPARATOR.'AffixData',
             $base_dir.DIRECTORY_SEPARATOR.'AffixStatData',
 //            $base_dir.DIRECTORY_SEPARATOR.'AfflictionData',

@@ -2,6 +2,8 @@
 
 namespace App;
 
+use App\Models\DataFile;
+use App\Models\Localization;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder as SchemaBuilder;
 use Illuminate\Database\Schema\ForeignKeyDefinition;
@@ -352,7 +354,7 @@ class TableBuilder
                 'column_name' => 'localization_id',
                 'references_column' => 'id',
                 'on_table' => 'localizations',
-                'value' => null,
+                'value' => DataFile::where('filename', $table_name.'.json')->first()?->id,
             ];
             // data_files FK
             $tables_data [$table_name]['foreign_keys'][] =[
@@ -361,17 +363,23 @@ class TableBuilder
                 'column_name' => 'data_file_id',
                 'references_column' => 'id',
                 'on_table' => 'data_files',
-                'value' => null,
+                'value' => Localization::where(
+                    'id_key',
+                    'like',
+                    '%' . array_key_first($data['values']) . '%'
+                )->first()?->id,
             ];
 //dump($tables_data[$table_name]['foreign_keys']);
             
             // save data
-            DB::table('foreign_key_map')
-                ->upsert(
-                    $tables_data [$table_name]['foreign_keys'],
-                    ['name']
-                )
-            ;
+            foreach(array_chunk($tables_data[$table_name]['foreign_keys'], 5000) as $foreign_keys){
+                DB::table('foreign_key_map')
+                    ->upsert(
+                        $foreign_keys,
+                        ['name']
+                    )
+                ;
+            }
             
         } // end foreach data
 
@@ -379,9 +387,6 @@ class TableBuilder
     }
     
     public function addForeignKeysToTables(array $tables_data){
-        // TODO: loop to create table first, then loop for updating table to add foreign keys
-        //       to ensure the referenced tables/columns exist
-
         // add any foreign keys to the tables
         foreach($tables_data as $table_name => $table_data){
             $this->addForeignKeysToTable($table_name, $table_data);
@@ -444,19 +449,14 @@ class TableBuilder
                     // narrow down the matching values array to only the
                     // key=>value pair that matches the currently searched values
                     collect($value_array)->each(function($value, $key) use ($table_name, $other_table, $other_values, &$foreign_keys) {
-
-                        $found_array = [];
                         
                         foreach($other_values as $other_value_array){
                         
                             $found_key = array_search($value, $other_value_array);
                         
                             if(empty($found_key)){
-                                $found_array []= null;
                                 continue;
                             }
-                        
-                            $found_array [$other_table][]= [$found_key => $value];
                             
                             $foreign_keys []= [
                                'name' =>  'fk_'.$table_name.'_'.$found_key, // this table + related column
@@ -466,10 +466,7 @@ class TableBuilder
                                'on_table' => $other_table, // related table
                                'value' => $value, 
                             ];
-                        }
-                        
-                        return $found_array;
-                        
+                        }                        
                     })->all();
 //dd('-- end --', $foreign_keys);
                 }
@@ -518,7 +515,6 @@ class TableBuilder
         }*/
         // define constraint
         $table->foreign($column_name, $fk_name)->references($fk_references)->on($fk_on);
-        // $table->foreign('localization_id', 'fk_'.Str::random(8).'_localize_id')->references('id')->on('localizations');
     }
     
     /*// sail user does not have select permissions on information_schema in docker...
