@@ -6,12 +6,8 @@ use App\Models\DataFile;
 use App\Models\Localization;
 use App\Parsers\JsonFileParser;
 use App\TableBuilder;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 
 class JsonSeeder extends Seeder
 {
@@ -94,9 +90,12 @@ class JsonSeeder extends Seeder
         
         $combos = collect($combos)->flatten(1)->all();
         
-        $sb = new TableBuilder();
-        $table_data = $sb->createTableInfo($combos);
-        $sb->createTables($table_data);
+        $TableBuilder = new TableBuilder();
+        $tables_data = $TableBuilder->createTableInfo($combos);
+        $TableBuilder->createTables($tables_data, false);
+        dump("Tables created.");
+        $tables_data = $TableBuilder->createForeignKeysInfo($combos, $tables_data);
+        $TableBuilder->addForeignKeysToTables($tables_data);
 /////////////////////////////////////
 die;        
         dump("Upserting ".basename($dir)." filenames...");

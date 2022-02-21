@@ -22,7 +22,7 @@ class JsonFileParser implements FileParserContract
 
     public function parseDir(string $dir)
     {
-        dump("Parsing ".basename($dir)."/...");
+        dump("Parsing directory: ".basename($dir)."/...");
         
         // get all files from dir and subdirectories
         $files = File::allFiles($dir);
@@ -53,7 +53,7 @@ class JsonFileParser implements FileParserContract
                 'filename' => $filename,
             ];
             
-            dump("Parsing {$filename}...");
+            dump("Parsing file: {$filename}...");
             $values = array_filter($this->parseFile($filepath));
             
             if(empty($values)){

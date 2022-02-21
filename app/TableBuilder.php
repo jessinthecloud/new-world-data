@@ -11,7 +11,10 @@ use Illuminate\Support\Str;
 
 class TableBuilder
 {
-    public function __construct(protected ?SchemaBuilder $Schema=null) { }
+    public function __construct(protected ?SchemaBuilder $Schema=null) {
+        // YOLO
+        set_time_limit(0);
+    }
 
     /******************
      * Definitions
@@ -54,7 +57,7 @@ class TableBuilder
             
         // CREATE TABLES DEFINITIONS 
             $tables_data [$table_name]['columns']=[];
-            $tables_data [$table_name]['foreign_keys']=[];
+//            $tables_data [$table_name]['foreign_keys']=[];
 
             foreach($column_names as $index => $column_name) {
             
@@ -69,10 +72,6 @@ class TableBuilder
                 $tables_data [$table_name]['columns'][]= $column_data;
                 
             } // end foreach column names
-
-            // TODO: find & add dynamic foreign key definitions
-            //       (columns already exist)
-            $tables_data = $this->findForeignKeys($table_name, $tables_data, $values, $data_array);
 
             // localizations FK column
             $tables_data [$table_name]['columns'][]= [
@@ -89,9 +88,12 @@ class TableBuilder
                 'unique' => null,
             ];
             
+            /*// find dynamic foreign key definitions (columns already exist)
+            $tables_data = $this->findForeignKeys($table_name, $tables_data, $values, $data_array);
+            
             /*
              * add known foreign key definitions
-             */
+             *
             // localizations FK
             $tables_data [$table_name]['foreign_keys'][] =[
                 'name' => 'fk_'.$table_name.'_localization_id',
@@ -105,35 +107,44 @@ class TableBuilder
                 'column_name' => 'data_file_id',
                 'references' => 'id',
                 'on' => 'data_files',
-            ];
-            
+            ];*/
+//dd($tables_data);
         } // end foreach data
         
         return $tables_data;
-    } 
+    }
     
-    public function createTables(array $tables_data){
+    /**
+     * @param array $tables_data
+     * @param bool  $dropIfExists - drops existing tables when true, skips existing when false
+     *
+     * @return void
+     */
+    public function createTables(array $tables_data, bool $dropIfExists=true){
         // TODO: loop to create table first, then loop for updating table to add foreign keys
         //       to ensure the referenced tables/columns exist
 
         // create the tables
         foreach($tables_data as $table_name => $table_data){
-            $this->createTable($table_name, $table_data);
+            $this->createTable($table_name, $table_data, $dropIfExists);
         }
 
+        /*
         // add any foreign keys to the tables
         foreach($tables_data as $table_name => $table_data){
             $this->addForeignKeysToTable($table_name, $table_data);
         }
+        */
     }
     
-    protected function createTable(string $table_name, array $table_data)
+    protected function createTable(string $table_name, array $table_data, bool $dropIfExists=true)
     {        
         dump("Creating table {$table_name}..."/*, $table_data['columns']*/);
 
-        // drop table if exists to avoid foreign key collisions
-        //       since we can't check for them
-        Schema::dropIfExists($table_name);
+        if($this->shouldSkipTable($table_name, $dropIfExists)){
+            dump("{$table_name} table already exists.");
+            return;
+        }
         
         Schema::create($table_name, function (Blueprint $table) use ($table_name, $table_data) {
         
@@ -264,6 +275,111 @@ class TableBuilder
             'size'=>$max,
         ];
     }
+    
+    protected function createColumn($table, $column_name, $column_type, $column_size, $column_unique_name=null)
+    {
+        if(str_contains(strtolower($column_type), 'integer')) {
+            // prevent int with size setting auto_increment=true
+            $column = $table->$column_type($column_name)->nullable();
+        }
+        else{
+            $column = $table->$column_type($column_name, $column_size)->nullable();
+        }
+        
+        if(isset($column_unique_name)){
+            // this column is the ID field for the JSON file
+            $column->unique($column_unique_name);
+        }
+        
+        return $table;
+    }
+    
+    private function shouldSkipTable(string $table_name, bool $dropIfExists) : bool
+    {
+        if($dropIfExists){
+            // drop table if exists to avoid foreign key collisions
+            //       since we can't check for them
+            Schema::dropIfExists($table_name);
+            return false;
+        }
+        
+        return Schema::hasTable($table_name);
+    }
+
+    public function createForeignKeysInfo(array $data_array, array $tables_data) : array
+    {
+        dump("Creating Foreign key info...");
+        
+        if(!Schema::hasTable('foreign_key_map')){
+            Schema::create('foreign_key_map', function (Blueprint $table) {
+                $table->id();
+                $table->string('name')->unique();
+                $table->string('table_name');
+                $table->string('column_name');
+                $table->string('references_column');
+                $table->string('on_table');
+                $table->text('value')->nullable();
+                // created/updated
+                $table->timestamps();
+            });
+        }
+        
+        foreach($data_array as $data_index => $data){
+            $table_name = $data['table']['name'];
+            $values = $data['values'];
+            
+            dump("Finding foreign keys for $table_name...");
+
+            $tables_data [$table_name]['foreign_keys']=[];
+            
+            // find dynamic foreign key definitions (columns already exist)
+            $tables_data [$table_name]['foreign_keys'] = $this->findForeignKeys($table_name, $tables_data, $values, $data_array);
+            
+            /*
+             * add known foreign key definitions
+             */
+            // localizations FK
+            $tables_data [$table_name]['foreign_keys'][] =[
+                'name' => 'fk_'.$table_name.'_localization_id',
+                'table_name' => $table_name,
+                'column_name' => 'localization_id',
+                'references_column' => 'id',
+                'on_table' => 'localizations',
+                'value' => null,
+            ];
+            // data_files FK
+            $tables_data [$table_name]['foreign_keys'][] =[
+                'name' => 'fk_'.$table_name.'_file_id',
+                'table_name' => $table_name,
+                'column_name' => 'data_file_id',
+                'references_column' => 'id',
+                'on_table' => 'data_files',
+                'value' => null,
+            ];
+dump($tables_data[$table_name]['foreign_keys']);
+            
+            // save data
+            DB::table('foreign_key_map')
+                ->upsert(
+                    $tables_data [$table_name]['foreign_keys'],
+                    ['name']
+                )
+            ;
+            
+        } // end foreach data
+
+        return $tables_data;
+    }
+    
+    public function addForeignKeysToTables(array $tables_data){
+        // TODO: loop to create table first, then loop for updating table to add foreign keys
+        //       to ensure the referenced tables/columns exist
+
+        // add any foreign keys to the tables
+        foreach($tables_data as $table_name => $table_data){
+            $this->addForeignKeysToTable($table_name, $table_data);
+        }
+    }
 
     /*
        $tables_data [$table_name]['foreign_keys'][] =[
@@ -273,8 +389,8 @@ class TableBuilder
             'on' => 'localizations', // related table
         ];
      */
-     protected function findForeignKeys(string $table_name, array $tables_data, array $values, array $data_array){
-     
+     protected function findForeignKeys(string $table_name, array $tables_data, array $values, array $data_array) : array
+     {
         // exclude current table columns that are not unique indexes
         $columns_data = array_filter($tables_data[$table_name]['columns'], function($value, $key){
             return isset($value['unique']);
@@ -289,12 +405,8 @@ class TableBuilder
         $data_array = array_filter($data_array, function($val) use ($table_name) {
             return $val['table']['name'] != $table_name;
         });
-dump($table_name); 
-        foreach ( $columns_data as $index => $column_data ) {
-            $tables_data [$table_name]['foreign_keys'][] = $this->findForeignKey($table_name, $values, $data_array);
-        }
-die;        
-        return [];
+
+        return $this->findForeignKeyData($table_name, $values, $data_array);
      }
 
     /**
@@ -304,7 +416,7 @@ die;
      *
      * @return array
      */
-     protected function findForeignKey(string $table_name, array $values, array $data_array) : array
+     protected function findForeignKeyData(string $table_name, array $values, array $data_array) : array
      {        
         /*$table_name = $data['table']['name'];
         $column_names = $data['table']['columns'];
@@ -312,8 +424,8 @@ die;
        
         $foreign_keys = [];
         foreach($values as $column_name => $value_array){
-            // search for matching value_array in other tables:
-
+            
+            // search column's values for matching values in other tables:
             foreach($data_array as $data){
                 $other_table = $data['table']['name'];
                 $other_values = $data['values'];
@@ -343,9 +455,10 @@ die;
                             
                             $foreign_keys []= [
                                'name' =>  'fk_'.$table_name.'_'.$found_key, // this table + related column
-                               'column_name' => $key, //key($value), // this table
-                               'references' => $found_key, // related column
-                               'on' => $other_table, // related table
+                               'table_name' => $table_name, // this table
+                               'column_name' => $key, //key($value), // this table column
+                               'references_column' => $found_key, // related column
+                               'on_table' => $other_table, // related table
                                'value' => $value, 
                             ];
                         }
@@ -401,24 +514,6 @@ die;
         // define constraint
         $table->foreign($column_name, $fk_name)->references($fk_references)->on($fk_on);
         // $table->foreign('localization_id', 'fk_'.Str::random(8).'_localize_id')->references('id')->on('localizations');
-    }
-
-    protected function createColumn($table, $column_name, $column_type, $column_size, $column_unique_name=null)
-    {
-        if(str_contains(strtolower($column_type), 'integer')) {
-            // prevent int with size setting auto_increment=true
-            $column = $table->$column_type($column_name)->nullable();
-        }
-        else{
-            $column = $table->$column_type($column_name, $column_size)->nullable();
-        }
-        
-        if(isset($column_unique_name)){
-            // this column is the ID field for the JSON file
-            $column->unique($column_unique_name);
-        }
-        
-        return $table;
     }
     
     /*// sail user does not have select permissions on information_schema in docker...
