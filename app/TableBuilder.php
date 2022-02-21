@@ -322,27 +322,43 @@ dump($table_name, /*$values[0], reset($data_array)*/);
 //dd('value_array:', $value_array, 'other:',$other_value_array, array_intersect($value_array, $other_value_array));                
                     return !empty(array_intersect($value_array, $other_value_array));
                 });
+                
+               /* $other_values = array_map(function($other_value_array) use ($value_array) {
+if (!empty(array_intersect($value_array, $other_value_array))) dump('value_array:', $value_array, 'other:',$other_value_array, array_intersect($value_array, $other_value_array));
+                    
+                    $arr_with_matches = array_intersect($value_array, $other_value_array);
+                    
+                    $arr_with_matches = array_filter(array_map(function($value) use ($arr_with_matches, $value_array) {
+                        $found_key = array_search($value, $arr_with_matches);
+if(!empty($found_key)) dump('found key: '.$found_key);                          
+                            return empty($found_key) ? null : [$found_key => $value]; 
+                    }, $value_array));
+if(!empty($arr_with_matches)) dd($arr_with_matches);              
+                    return empty($arr_with_matches) ? null : $arr_with_matches;
+                }, $other_values);*/
 
 
                 if(!empty(array_filter($other_values))){
                     // narrow down the matching values array to only the key=>value
                     // that matches the currently searched values
-                    $other_values = array_map(function($value) use ($other_values, $value_array) {
-// dump('-----', 'value:', $value, 'value arr:', $value_array, 'other arr: ',$other_values);
-                       $found_array = [];
+                    $other_values = array_map(function($value) use ($other_values, $value_array, $other_table) {
+
+                        $found_array = [];
+                        
                         foreach($other_values as $other_value_array){
                             $found_key = array_search($value, $other_value_array);
-//if(!empty($found_key)) dump($found_key);                            
-                            $found_array []= empty($found_key) ? null : [$found_key => $value]; 
+                            $found_array [$other_table][]= empty($found_key) ? null : [$found_key => $value]; 
                         }
+                        
                         return $found_array;
+                        
                     }, $value_array);
                     
-                    $matches[$table_name][]=$other_values;
+                    $matches[$table_name][]= $other_values;
                 }
             }
         }
-if(!empty(array_filter($matches))){ dump('-----',$value_array,'MATCHES:', $matches); }
+if(!empty(array_filter($matches))){ dump('MATCHES:', $matches); }
      }
      
     /**
