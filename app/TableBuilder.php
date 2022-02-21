@@ -44,7 +44,7 @@ class TableBuilder
     public function createTableInfo(array $data_array) : array
     {
         $tables_data = [];
-        
+       
         foreach($data_array as $data_index => $data){
             $dir = $data['dir'];
             $file = $data['file'];
@@ -72,7 +72,7 @@ class TableBuilder
 
             // TODO: find & add dynamic foreign key definitions
             //       (columns already exist)
-            $tables_data = $this->findForeignKeys($table_name, $tables_data);
+            $tables_data = $this->findForeignKeys($table_name, $tables_data, $values, $data_array);
 
             // localizations FK column
             $tables_data [$table_name]['columns'][]= [
@@ -273,31 +273,76 @@ class TableBuilder
             'on' => 'localizations', // related table
         ];
      */
-     protected function findForeignKeys(string $table_name, array $tables_data){
-        
-        $columns_data = $tables_data[$table_name]['columns'];
-        
-        foreach ( $columns_data as $index => $column_data ) {
-            $this->findForeignKey($column_data, $tables_data);
+     protected function findForeignKeys(string $table_name, array $tables_data, array $values, array $data_array){
+     
+        // exclude current table columns that are not unique indexes
+        $columns_data = array_filter($tables_data[$table_name]['columns'], function($value, $key){
+            return isset($value['unique']);
+        }, ARRAY_FILTER_USE_BOTH);
+
+         // exclude current table values that are not unique indexes' column values
+         $values = array_map(function($val) use ($columns_data) {
+            return array_intersect_key($val, array_flip(array_column($columns_data, 'name')));
+         }, $values);
+//dd($values);
+         foreach ( $columns_data as $index => $column_data ) {
+            $this->findForeignKey($table_name, $column_data, $tables_data, $values, $data_array);
         }
-        
+die;        
         return [];
      }
-     
-     protected function findForeignKey(array $column_data, array $tables_data)
+
+    /**
+     * @param array $column_data - this entry
+     * @param array $tables_data - other entries
+     *
+     * @return void
+     */
+     protected function findForeignKey(string $table_name, array $column_data, array $tables_data, array $values, array $data_array)
      {
-        // exclude current table columns that are not unique indexes
-        $column_data = array_filter($column_data, function($key){
-            return $key == 'unique';
-        }, ARRAY_FILTER_USE_KEY);
         
-        $column_type = $column_data['type'];
-        $column_name = $column_data['name'];
-        $column_size = $column_data['size'];
-        $column_unique_name = $column_data['unique'];
+        // exclude current table from tables we will check for matches
+        $data_array = array_filter($data_array, function($val) use ($table_name) {
+            return $val['table']['name'] != $table_name;
+        });
         
-        // todo: finish
-        
+        /*$table_name = $data['table']['name'];
+        $column_names = $data['table']['columns'];
+        $values = $data['values'];*/
+dump($table_name, /*$values[0], reset($data_array)*/);        
+        $matches = [];
+        foreach($values as $column_name => $value_array){
+            // search for matching value_array in other tables:
+
+            foreach($data_array as $data){
+                $other_table = $data['table']['name'];
+                $other_values = $data['values'];
+
+                $other_values = array_filter($other_values, function($other_value_array) use ($value_array) {
+//dd('value_array:', $value_array, 'other:',$other_value_array, array_intersect($value_array, $other_value_array));                
+                    return !empty(array_intersect($value_array, $other_value_array));
+                });
+
+
+                if(!empty(array_filter($other_values))){
+                    // narrow down the matching values array to only the key=>value
+                    // that matches the currently searched values
+                    $other_values = array_map(function($value) use ($other_values, $value_array) {
+// dump('-----', 'value:', $value, 'value arr:', $value_array, 'other arr: ',$other_values);
+                       $found_array = [];
+                        foreach($other_values as $other_value_array){
+                            $found_key = array_search($value, $other_value_array);
+//if(!empty($found_key)) dump($found_key);                            
+                            $found_array []= empty($found_key) ? null : [$found_key => $value]; 
+                        }
+                        return $found_array;
+                    }, $value_array);
+                    
+                    $matches[$table_name][]=$other_values;
+                }
+            }
+        }
+if(!empty(array_filter($matches))){ dump('-----',$value_array,'MATCHES:', $matches); }
      }
      
     /**
