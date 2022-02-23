@@ -342,7 +342,9 @@ class TableBuilder
             $tables_data [$table_name]['foreign_keys']=[];
             
             // find dynamic foreign key definitions (columns already exist)
-            $tables_data [$table_name]['foreign_keys'] = $this->findForeignKeys($table_name, $tables_data, $values, $data_array);
+            // TEMP DISABLE
+            // TODO: re-enable and fix/run
+//            $tables_data [$table_name]['foreign_keys'] = $this->findForeignKeys($table_name, $tables_data, $values, $data_array);
             
             /*
              * add known foreign key definitions
@@ -507,12 +509,26 @@ class TableBuilder
         $fk_references = $foreign_key_data['references'];
         $fk_on = $foreign_key_data['on'];
         
-        // drop if exists
         // sail user does not have select permissions on information_schema in docker
         /*if(Schema::hasColumn($table_name, $column_name) 
             && $this->hasForeignKey($table_name, $fk_name)){
             $table->dropForeign($fk_name);
         }*/
+        
+        try {
+            // drop if exists
+            $table->dropForeign($fk_name);
+        }
+        catch (\Throwable $throwable){
+            dump(
+                "Exception encountered; Foreign key probably exists: "
+                . substr($throwable->getMessage(), 0, 300),
+                'Error code: ' . $throwable->getCode()
+                . ' -- on line: ' . $throwable->getLine()
+                . ' -- in file: ' . $throwable->getFile()
+            );
+        }
+        
         // define constraint
         $table->foreign($column_name, $fk_name)->references($fk_references)->on($fk_on);
     }
