@@ -101,6 +101,7 @@ class JsonSeeder extends Seeder
         dump("Tables created.");
         $tables_data = $TableBuilder->createForeignKeysInfo($combos, $tables_data);
         $TableBuilder->addForeignKeysToTables($tables_data);
+        $TableBuilder->upsertTablesValues($tables_data);
 /////////////////////////////////////
 die;        
         dump("Upserting ".basename($dir)." filenames...");

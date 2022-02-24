@@ -547,4 +547,24 @@ class TableBuilder
     {
         return in_array($fk_name, $this->getForeignKeys($table_name));
     }*/
+
+    /**
+     * @param array $tables_data
+     *
+     * @return void
+     */
+    public function upsertTablesValues(array $tables_data)
+    {
+//         DataFile::where('filename', $table_name.'.json')->first()?->id
+/*Localization::where(
+    'id_key',
+    'like',
+    '%' . array_key_first($data['values']) . '%'
+)->first()?->id*/
+dd($tables_data);
+        foreach ( $tables_data['values'] as $db_values ) {
+            // first key should be the uniqueID column, i.e., ItemID, WeaponID
+            $unique_key = array_key_first($db_values);
+        }
+    }
 }
