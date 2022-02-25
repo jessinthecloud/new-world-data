@@ -4,6 +4,7 @@ namespace App;
 
 use App\Models\DataFile;
 use App\Models\Localization;
+use Illuminate\Database\QueryException;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Builder as SchemaBuilder;
 use Illuminate\Database\Schema\ForeignKeyDefinition;
@@ -57,33 +58,36 @@ class TableBuilder
             $column_names = $data['table']['columns'];
             $values = $data['values'];
             
-        // CREATE TABLES DEFINITIONS 
+        // CREATE TABLES DEFINITIONS
+            $tables_data [$table_name]['values']=$values;
             $tables_data [$table_name]['columns']=[];
 //            $tables_data [$table_name]['foreign_keys']=[];
 
             foreach($column_names as $index => $column_name) {
-            
+                // remove spaces from keys                
+                $column_name = $this->ensureValidColumnName($column_name);
+                
             //-- find column info; type, size
                 $column_data = $this->findColumnInfo($column_name, $values);
-                $column_data['name'] = $column_name;
+                
                 // first key is the unique index (probably...)
                 $column_data['unique'] = ($index === 0) 
                     ? 'uni_'.$table_name.'_'.Str::limit($column_name, 20, '')
                     : null; 
 
-                $tables_data [$table_name]['columns'][]= $column_data;
+                $tables_data [$table_name]['columns'][$column_name]= $column_data;
                 
             } // end foreach column names
 
             // localizations FK column
-            $tables_data [$table_name]['columns'][]= [
+            $tables_data [$table_name]['columns']['localization_id']= [
                 'name' => 'localization_id',
                 'type' => 'unsignedBigInteger',
                 'size' => null,
                 'unique' => null,
             ];
             // data_files FK column
-            $tables_data [$table_name]['columns'][]= [
+            $tables_data [$table_name]['columns']['data_file_id']= [
                 'name' => 'data_file_id',
                 'type' => 'unsignedBigInteger',
                 'size' => null,
@@ -100,14 +104,14 @@ class TableBuilder
             $tables_data [$table_name]['foreign_keys'][] =[
                 'name' => 'fk_'.$table_name.'_localization_id',
                 'column_name' => 'localization_id',
-                'references' => 'id',
+                'references_column' => 'id',
                 'on' => 'localizations',
             ];
             // data_files FK
             $tables_data [$table_name]['foreign_keys'][] =[
                 'name' => 'fk_'.$table_name.'_file_id',
                 'column_name' => 'data_file_id',
-                'references' => 'id',
+                'references_column' => 'id',
                 'on' => 'data_files',
             ];*/
 //dd($tables_data);
@@ -151,17 +155,13 @@ class TableBuilder
         Schema::create($table_name, function (Blueprint $table) use ($table_name, $table_data) {
         
             $columns_data = $table_data['columns'];
-        
-            // remove spaces from keys
-            $columns_data = $this->ensureValidColumnNames($columns_data);
                             
             // still auto inc primary key
             $table->id();
             
-            foreach ( $columns_data as $index => $column_data ) {
+            foreach ( $columns_data as $column_name => $column_data ) {
 
                 $column_type = $column_data['type'];
-                $column_name = $column_data['name'];
                 $column_size = $column_data['size'];
                 $column_unique_name = $column_data['unique'];
             
@@ -180,29 +180,32 @@ class TableBuilder
         dump("{$table_name} table created.");
     }
     
-    protected function ensureValidColumnNames(array $columns_data) : array
+    protected function ensureValidColumnName(string $name) : string
     {
-        array_walk($columns_data, function(&$column_data){
-            $column_data['name'] = Str::replace(' ', '_', $column_data['name']);
-        });
-
-        // todo: make sure values keys are also converted so that they match when compared
-        
-        return $columns_data;
+        return Str::replace(' ', '_', $name);
     }
     
     protected function findColumnInfo(string $column_name, array $values) : array
     {
+        $is_numeric = false;
         // remove empty values
         $column_values = array_filter(array_column($values, $column_name));
-        // pick a value to check
-        $check_value = reset($column_values);
-        $is_numeric = is_numeric($check_value);
+        
+        // check for numbers
+        $numerics = array_filter($column_values, function($value){
+            return is_numeric($value);
+        });
+        
+        // remaining values must all be numeric in order for
+        // the column to not be set to a string type
+        if(sizeof($numerics) === sizeof($column_values)){
+            $is_numeric = true;
+        }
 
-        return $is_numeric ? $this->findNumericColumnInfo($check_value, $column_values) : $this->findTextColumnInfo($check_value, $column_values);
+        return $is_numeric ? $this->findNumericColumnInfo($column_values) : $this->findTextColumnInfo($column_values);
     }
     
-    protected function findNumericColumnInfo($check_value, array $column_values) : array
+    protected function findNumericColumnInfo(array $column_values) : array
     {
         if(empty(array_filter($column_values))){
             // no values
@@ -213,16 +216,19 @@ class TableBuilder
                 'size'=>false,
             ];
         }
-    
-        $has_decimal = str_contains($check_value, '.');
         
+        // check for decimal
+        $has_decimal = !empty(array_filter($column_values, function($value){
+            return str_contains($value, '.');
+        }));
+
         // find the largest number by numeric value (not string value) 
         $max = max(array_map(function($val) use ($has_decimal) {
             return $has_decimal ? floatval($val) : intval($val);
         }, $column_values));
-        
+
+        // check for negative sign
         $unsigned = empty(array_filter($column_values, function($val) use ($has_decimal) {
-            // check for negative sign
             return str_contains(($has_decimal ? floatval($val) : intval($val)), '-');
         }));
 
@@ -251,7 +257,7 @@ class TableBuilder
         ];
     }
 
-    protected function findTextColumnInfo($check_value, array $column_values) : array
+    protected function findTextColumnInfo(array $column_values) : array
     {
         if(empty(array_filter($column_values))){
             // no values
@@ -285,6 +291,11 @@ class TableBuilder
             $column = $table->$column_type($column_name)->nullable();
         }
         else{
+            
+            if(str_contains(strtolower($column_type), 'float')) {
+                // size of float col is the TOTAL precision, must account for decimal places
+                $column_size = $column_size+2;
+            }
             $column = $table->$column_type($column_name, $column_size)->nullable();
         }
         
@@ -310,7 +321,7 @@ class TableBuilder
 
     public function createForeignKeysInfo(array $data_array, array $tables_data) : array
     {
-//        dump("Creating Foreign key info...");
+        dump("Creating Foreign key info...");
         
         if(!Schema::hasTable('foreign_key_map')){
             Schema::create('foreign_key_map', function (Blueprint $table) {
@@ -327,12 +338,14 @@ class TableBuilder
         }
         
         foreach($data_array as $data_index => $data){
+        
             $table_name = $data['table']['name'];
             $values = $data['values'];
 
             if(DB::table('foreign_key_map')
                 ->where('table_name', $table_name)
                 ->count() > 0){
+                dump('skipping '.$table_name.'...');
                 // we already found foreign keys for this table
                 continue;
             }
@@ -371,7 +384,6 @@ class TableBuilder
                     '%' . array_key_first($data['values']) . '%'
                 )->first()?->id,
             ];
-//dump($tables_data[$table_name]['foreign_keys']);
             
             // save data
             foreach(array_chunk($tables_data[$table_name]['foreign_keys'], 5000) as $foreign_keys){
@@ -384,7 +396,7 @@ class TableBuilder
             }
             
         } // end foreach data
-
+        
         return $tables_data;
     }
     
@@ -424,10 +436,6 @@ class TableBuilder
      */
      protected function findForeignKeyData(string $table_name, array $values, array $data_array) : array
      {        
-        /*$table_name = $data['table']['name'];
-        $column_names = $data['table']['columns'];
-        $values = $data['values'];*/
-        
         $foreign_keys = [];
         
         // remove numeric values from searchable values
@@ -506,8 +514,8 @@ class TableBuilder
 
         $fk_name = $foreign_key_data['name'];
         $column_name = $foreign_key_data['column_name'];
-        $fk_references = $foreign_key_data['references'];
-        $fk_on = $foreign_key_data['on'];
+        $fk_references = $foreign_key_data['references_column'];
+        $fk_on = $foreign_key_data['on_table'];
         
         // sail user does not have select permissions on information_schema in docker
         /*if(Schema::hasColumn($table_name, $column_name) 
@@ -515,19 +523,21 @@ class TableBuilder
             $table->dropForeign($fk_name);
         }*/
         
+        /*
+        // doesn't catch before laravel handles it
         try {
             // drop if exists
             $table->dropForeign($fk_name);
         }
-        catch (\Throwable $throwable){
+        catch (QueryException $e){
             dump(
                 "Exception encountered; Foreign key probably exists: "
-                . substr($throwable->getMessage(), 0, 300),
-                'Error code: ' . $throwable->getCode()
-                . ' -- on line: ' . $throwable->getLine()
-                . ' -- in file: ' . $throwable->getFile()
+                . substr($e->getMessage(), 0, 300),
+                'Error code: ' . $e->getCode()
+                . ' -- on line: ' . $e->getLine()
+                . ' -- in file: ' . $e->getFile()
             );
-        }
+        }*/
         
         // define constraint
         $table->foreign($column_name, $fk_name)->references($fk_references)->on($fk_on);
@@ -555,16 +565,73 @@ class TableBuilder
      */
     public function upsertTablesValues(array $tables_data)
     {
-//         DataFile::where('filename', $table_name.'.json')->first()?->id
-/*Localization::where(
-    'id_key',
-    'like',
-    '%' . array_key_first($data['values']) . '%'
-)->first()?->id*/
-dd($tables_data);
-        foreach ( $tables_data['values'] as $db_values ) {
-            // first key should be the uniqueID column, i.e., ItemID, WeaponID
-            $unique_key = array_key_first($db_values);
-        }
-    }
+        foreach ( $tables_data as $table_name => $table_data ) {
+        
+            dump("Inserting data for $table_name...");
+        
+            foreach ( $table_data['values'] as $index => $db_values ) {
+
+                // first key should be the uniqueID column, i.e., ItemID, WeaponID
+                $unique_key = array_key_first($db_values);
+                
+                // map to dir/file entry in data_files
+                $file_id = DataFile::where('filename', $table_name.'json')->first()?->id;
+                $db_values ['data_file_id']= $file_id;
+
+                // map to localization files
+                $localization_id = Localization::where(
+                    'id_key',
+                    'like',
+                    '%' . $unique_key . '%'
+                )->first()?->id;
+                
+                $db_values ['localization_id']= $localization_id;
+//dump($db_values);
+                foreach($db_values as $colname => $value){
+                
+                    // make sure name is valid
+                    // replace invalid key => value pairs
+                    $oldcol = $colname;
+                    $colname = $this->ensureValidColumnName($colname);
+                    if($oldcol != $colname){
+                        unset($db_values[$oldcol]);
+                        $db_values[$colname]= $value;
+                    }
+//dump("$colname :: $value --> ".$db_values[$colname]);
+                    // account for weird values
+                    // i.e., StatusEffects_Bow.RemoveUnappliedStacks is normally a number but also "FALSE"
+                    if((str_contains(strtolower($table_data['columns'][$colname]['type']), 'integer')
+                        || str_contains(strtolower($table_data['columns'][$colname]['type']), 'float'))
+                        && !is_numeric($value) && !is_bool($value) 
+                        && (strtolower($value) === "false" || strtolower($value) === "true")
+                    ){
+                        $db_values[$colname] = null;
+                    }
+                    
+                    if(!empty($value)){
+                        continue;
+                    }
+                    
+                    // make sure values are null instead of empty string if value is empty and a number
+                    if(str_contains(strtolower($table_data['columns'][$colname]['type']), 'integer')
+                        || str_contains(strtolower($table_data['columns'][$colname]['type']), 'float')){
+                        $db_values[$colname] = null;
+                    }
+                }
+                
+//                try {
+                    DB::table($table_name)->upsert($db_values, [$unique_key]);
+                /*} catch ( \Throwable $throwable ) {
+                    dump(
+                        'ERROR OCCURRED: ' 
+                            . $throwable->getMessage(),
+                            'Error code: ' . $throwable->getCode()
+                            . ' -- on line: ' . $throwable->getLine()
+                            . ' -- in file: ' . $throwable->getFile()
+                    );
+                    die;
+                } // end try/catch*/
+            } // end foreach table values
+        } // end foreach tables data
+    } // end upsertTableValues()
 }

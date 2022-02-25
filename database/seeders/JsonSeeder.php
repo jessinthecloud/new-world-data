@@ -99,7 +99,7 @@ class JsonSeeder extends Seeder
         $tables_data = $TableBuilder->createTableInfo($combos);
         $TableBuilder->createTables($tables_data, false);
         dump("Tables created.");
-        $tables_data = $TableBuilder->createForeignKeysInfo($combos, $tables_data);
+//        $tables_data = $TableBuilder->createForeignKeysInfo($combos, $tables_data);
         $TableBuilder->addForeignKeysToTables($tables_data);
         $TableBuilder->upsertTablesValues($tables_data);
 /////////////////////////////////////
