@@ -68,7 +68,22 @@ class TableBuilder
                 $column_name = $this->ensureValidColumnName($column_name);
                 
             //-- find column info; type, size
-                $column_data = $this->findColumnInfo($column_name, $values);
+                $column_data = match(strtolower($column_name)){
+                    // The localized text of these columns will be much 
+                    // longer than the values here. Make sure they
+                    // are long enough to fit the real text
+                    'description' => ['type' => 'text', 'size'=>null],
+                    'displayname' => ['type' => 'varchar', 'size'=>255],
+                    'itemtypedisplayname' => ['type' => 'varchar', 'size'=>255],
+                    'name' => ['type' => 'varchar', 'size'=>255],
+                    'appliedsuffix' => ['type' => 'varchar', 'size'=>100],
+                    default => $this->findColumnInfo($column_name, $values) 
+                };
+                
+                
+                (strtolower($column_name) == 'description') 
+                    ? ['type' => 'text', 'size'=>null] 
+                    : $this->findColumnInfo($column_name, $values);
                 
                 // first key is the unique index (probably...)
                 $column_data['unique'] = ($index === 0) 
