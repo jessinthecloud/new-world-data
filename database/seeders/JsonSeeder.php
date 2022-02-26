@@ -102,47 +102,5 @@ class JsonSeeder extends Seeder
 //        $tables_data = $TableBuilder->createForeignKeysInfo($combos, $tables_data);
 //        $TableBuilder->addForeignKeysToTables($tables_data);
         $TableBuilder->upsertTablesValues($tables_data);
-/////////////////////////////////////
-die;        
-        dump("Upserting ".basename($dir)." filenames...");
-        
-        foreach($combos as $index => $combo) {
-            foreach ( $combo['values'] as $db_values ) {
-                
-                $dir = $combo['dir'];
-                $file = $combo['file'];
-                $table_name = $combo['table']['name'];
-                $columns = $combo['table']['columns'];
-
-                // first key should be the uniqueID column, i.e., ItemID, WeaponID
-                $unique_key = array_key_first($db_values);
-
-                // map to dir/file entry in data_files
-                $file_id = DataFile::where('filename', $file)->first()?->id;
-                $db_values ['file_id']= $file_id;
-
-                // map to localization files
-                $localization_id = Localization::where(
-                    'id_key',
-                    'like',
-                    '%' . basename($unique_key, '.json') . '%'
-                )->first()?->id;
-                
-                $db_values ['localization_id']= $localization_id;
-
-                try {
-                    DB::table($table_name)->upsert($db_values, [$unique_key]);
-                } catch ( \Throwable $throwable ) {
-                    dump(
-                        'ERROR OCCURRED: ' 
-                            . substr($throwable->getMessage(), 0, 300),
-                            'Error code: ' . $throwable->getCode()
-                            . ' -- on line: ' . $throwable->getLine()
-                            . ' -- in file: ' . $throwable->getFile()
-                    );
-                    die;
-                }
-            } // foreach values
-        } // foreach combo
-    } // foreach combos    
+    }     
 }

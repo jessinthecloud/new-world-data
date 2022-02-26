@@ -77,6 +77,7 @@ class TableBuilder
                     'itemtypedisplayname' => ['type' => 'string', 'size'=>255],
                     'name' => ['type' => 'string', 'size'=>255],
                     'appliedsuffix' => ['type' => 'string', 'size'=>100],
+                    // this one just misbehaves
                     'primary_hand','primary hand' => ['type' => 'string', 'size'=>5],
                     default => $this->findColumnInfo($column_name, $values) 
                 };
