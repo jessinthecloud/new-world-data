@@ -11,9 +11,9 @@ class LocalizationsController extends Controller
 {
     public function convert()
     {
-        $tables = ['AffixDataTable', 'ItemPerks', 'MasterItemDefinitions_Common', 'MasterItemDefinitions_Crafting', 'MasterItemDefinitions_Faction', 'MasterItemDefinitions_Loot', 'MasterItemDefinitions_Named', 'MasterItemDefinitions_Omega', 'MasterItemDefinitions_Playtest', 'MasterItemDefinitions_Quest', 'MasterItemDefinitions_Store', 'StatusEffects', 'StatusEffects_Bow', 'StatusEffects_Common', 'StatusEffects_Firestaff', 'StatusEffects_Greataxe', 'StatusEffects_Greatsword', 'StatusEffects_Hatchet', 'StatusEffects_IceMagic', 'StatusEffects_Items', 'StatusEffects_Lifestaff', 'StatusEffects_Musket', 'StatusEffects_Perks', 'StatusEffects_Rapier', 'StatusEffects_Spear', 'StatusEffects_Sword', 'StatusEffects_VoidGauntlet', 'StatusEffects_Warhammer', 'AttributeThresholdAbilityTable', 'BowAbilityTable', 'FireMagicAbilityTable', 'GlobalAbilityTable', 'GreatAxeAbilityTable', 'HatchetAbilityTable', 'IceMagicAbilityTable', 'LifeMagicAbilityTable', 'MusketAbilityTable', 'RapierAbilityTable', 'SpearAbilityTable', 'SwordAbilityTable', 'VoidGauntletAbilityTable', 'WarHammerAbilityTable', 'DamageTypes', ];
+        $tables = ['AffixDataTable', 'ItemPerks', 'MasterItemDefinitions_Common', 'MasterItemDefinitions_Crafting', 'MasterItemDefinitions_Faction', 'MasterItemDefinitions_Loot', 'MasterItemDefinitions_Named', 'MasterItemDefinitions_Omega', 'MasterItemDefinitions_Playtest', 'MasterItemDefinitions_Quest', 'MasterItemDefinitions_Store',  'StatusEffects', 'StatusEffects_Bow', 'StatusEffects_Common', 'StatusEffects_Firestaff', 'StatusEffects_Greataxe', 'StatusEffects_Greatsword', 'StatusEffects_Hatchet', 'StatusEffects_IceMagic', 'StatusEffects_Items', 'StatusEffects_Lifestaff', 'StatusEffects_Musket', 'StatusEffects_Perks', 'StatusEffects_Rapier', 'StatusEffects_Spear', 'StatusEffects_Sword', 'StatusEffects_VoidGauntlet', 'StatusEffects_Warhammer', 'AttributeThresholdAbilityTable', 'BowAbilityTable', 'FireMagicAbilityTable', 'GlobalAbilityTable', 'GreatAxeAbilityTable', 'HatchetAbilityTable', 'IceMagicAbilityTable', 'LifeMagicAbilityTable', 'MusketAbilityTable', 'RapierAbilityTable', 'SpearAbilityTable', 'SwordAbilityTable', 'VoidGauntletAbilityTable', 'WarHammerAbilityTable', 'DamageTypes', ];
         // cols to convert
-        $column_names = ['Name', 'DisplayName', 'Description', 'ItemTypeDisplayName', 'AppliedSuffix',];
+        $column_names = ['Name', 'DisplayName', 'Description', 'ItemTypeDisplayName', 'AppliedSuffix', 'AppliedPrefix',];
         
         $tables_data = [];
         $keys = [];
@@ -21,6 +21,7 @@ class LocalizationsController extends Controller
 dump(' ---- TABLE: '.$table_name.' ---- ');
 
             $tables_data[$table_name] = [];
+            $tables_data[$table_name]['columns'] = [];
             
             foreach($column_names as $column_name){
                 if(Schema::hasColumn($table_name, $column_name)){
@@ -28,6 +29,11 @@ dump(' ---- TABLE: '.$table_name.' ---- ');
                 }
             } // end col names
 
+            if(empty($tables_data[$table_name]['columns'])){
+                // no data, skip
+                continue;
+            }
+            
             // get the data that needs converting
             $id_keys = DB::table($table_name)->select($tables_data[$table_name]['columns'])
                 // remove empty and duplicates
