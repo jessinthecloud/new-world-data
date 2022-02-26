@@ -29,46 +29,49 @@ dump(' ---- TABLE: '.$table_name.' ---- ');
             } // end col names
 
             // get the data that needs converting
-            $keys = DB::table($table_name)->select($tables_data[$table_name]['columns'])
+            $id_keys = DB::table($table_name)->select($tables_data[$table_name]['columns'])
+                // remove empty and duplicates
                 ->get()->flatten(1)->filter()->unique()->all();
-
-            // remove empty and duplicates
-            $keys = array_filter($keys);
-//if($table_name == 'ItemPerks'){ die; }            
-            foreach($keys as $key_array){
+ 
+//if($table_name == 'ItemPerks'){ die; }
+            
+            foreach($id_keys as $id_key_array){
                 // make sure not stdClass
-                $key_array = (array)$key_array;
-                if(empty(array_filter($key_array))){
+                $id_key_array = (array)$id_key_array;
+                if(empty(array_filter($id_key_array))){
                     continue;
                 }
-                foreach($key_array as $key) {
-                    if(empty($key)){
+                foreach($id_key_array as $column_name => $id_key) {
+//dd("$table_name.$column_name --> $id_key");
+                    if(empty($id_key)){
                         continue;
                     }
                     // find the localized match, with or without @
                     /*$localization = Localization::whereRaw('MATCH(id_key) AGAINST (?,?,?) IN BOOLEAN MODE', 
                         [
-                            ltrim($key, '@').', ' 
-                            . ltrim($key, '@').'_MasterName, ' 
-                            . ltrim($key, '@').'_Description'
+                            ltrim($id_key, '@').', ' 
+                            . ltrim($id_key, '@').'_MasterName, ' 
+                            . ltrim($id_key, '@').'_Description'
                         ]
                     )
                         ->get()->first();*/
                     
                     $localization = Localization::whereIn('id_key', 
                         [
-                            ltrim($key, '@'),  
-                            ltrim($key, '@').'_MasterName', 
-                            ltrim($key, '@').'_Description',
+                            ltrim($id_key, '@'),  
+                            ltrim($id_key, '@').'_MasterName', 
+                            ltrim($id_key, '@').'_Description',
                         ]
                     )
                         ->get()->first();    
-                    
-                    dump("$key: ".$localization?->text);
-                }
-            }
-        }
-    
+                    $tables_data[$table_name][$column_name][$id_key] = strip_tags($localization?->text);
+                    if(!empty(strip_tags($localization?->text))){
+//                        dump("$id_key: ".$localization?->text);
+                        DB::table($table_name)->where($column_name, $id_key)->update([$column_name => strip_tags($localization?->text)]);
+                    }
+                } // end each id_key
+            } // end each idkey array
+        } // end each table    
     }
     
     public function index()
