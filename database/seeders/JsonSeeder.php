@@ -71,8 +71,8 @@ class JsonSeeder extends Seeder
             
             // war board 
 //            $base_dir.DIRECTORY_SEPARATOR.'ContributionData',
-//            $base_dir.DIRECTORY_SEPARATOR.'WarboardStatDefinitions',
-//            $base_dir.DIRECTORY_SEPARATOR.'GameModeData',
+            $base_dir.DIRECTORY_SEPARATOR.'WarboardStatDefinitions',
+            $base_dir.DIRECTORY_SEPARATOR.'GameModeData',
         ];
         
         $parser = new JsonFileParser();
@@ -97,7 +97,7 @@ class JsonSeeder extends Seeder
         
         $TableBuilder = new TableBuilder();
         $tables_data = $TableBuilder->createTableInfo($combos);
-//        $TableBuilder->createTables($tables_data, false);
+        $TableBuilder->createTables($tables_data, false);
         dump("Tables created.");
 //        $tables_data = $TableBuilder->createForeignKeysInfo($combos, $tables_data);
 //        $TableBuilder->addForeignKeysToTables($tables_data);
