@@ -19,3 +19,5 @@ Route::get('/', function () {
     echo $output;
 //    return view('welcome');
 });
+
+Route::get('/convert', [\App\Http\Controllers\LocalizationsController::class, 'convert']);

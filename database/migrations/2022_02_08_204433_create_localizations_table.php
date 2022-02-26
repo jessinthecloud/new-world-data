@@ -21,6 +21,7 @@ class CreateLocalizationsTable extends Migration
             $table->timestamps();
         } );
         
+        // ALTER TABLE localizations ADD FULLTEXT(id_key);
         Schema::create( 'localizations', function ( Blueprint $table ) {
             $table->id();
             // set the collation to utf8mb4_bin because the *_ci collations are case and accent insensitive
