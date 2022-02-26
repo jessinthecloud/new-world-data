@@ -73,10 +73,10 @@ class TableBuilder
                     // longer than the values here. Make sure they
                     // are long enough to fit the real text
                     'description' => ['type' => 'text', 'size'=>null],
-                    'displayname' => ['type' => 'varchar', 'size'=>255],
-                    'itemtypedisplayname' => ['type' => 'varchar', 'size'=>255],
-                    'name' => ['type' => 'varchar', 'size'=>255],
-                    'appliedsuffix' => ['type' => 'varchar', 'size'=>100],
+                    'displayname' => ['type' => 'string', 'size'=>255],
+                    'itemtypedisplayname' => ['type' => 'string', 'size'=>255],
+                    'name' => ['type' => 'string', 'size'=>255],
+                    'appliedsuffix' => ['type' => 'string', 'size'=>100],
                     default => $this->findColumnInfo($column_name, $values) 
                 };
                 
