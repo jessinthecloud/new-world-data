@@ -62,12 +62,12 @@ dump(' ---- TABLE: '.$table_name.' ---- ');
                     )
                         ->get()->first();*/
                     
-                    $localization = Localization::whereIn('id_key', 
-                        [
+                    $localization = Localization::where('id_key', 
+//                        [
                             ltrim($id_key, '@'),  
-                            ltrim($id_key, '@').'_MasterName', 
-                            ltrim($id_key, '@').'_Description',
-                        ]
+                            /*ltrim($id_key, '@').'_MasterName', 
+                            ltrim($id_key, '@').'_Description',*/
+//                        ]
                     )
                         ->get()->first();    
                     $tables_data[$table_name][$column_name][$id_key] = strip_tags($localization?->text);
